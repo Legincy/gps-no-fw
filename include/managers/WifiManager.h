@@ -40,7 +40,7 @@ private:
     constexpr size_t getWifiStatusCount() {return static_cast<size_t>(WiFiStatus::__DELIMITER__);};
 
     static void onFtmReport(arduino_event_t *event);
-    const char *ftm_status_str[5] = {"SUCCESS", "UNSUPPORTED", "CONF_REJECTED", "NO_RESPONSE", "FAIL"};
+    const char *getWifiFtmStatusString(wifi_ftm_status_t status);
 
 public:
     WifiManager(const WifiManager&) = delete;
@@ -68,6 +68,10 @@ public:
 
     WiFiStatus getStatus();
     const char* getStatusString() { return getWifiStatusString(status); };
+    
+    wifi_ftm_status_t getFtmStatus();
+    const char* getFtmStatusString() { return getWifiFtmStatusString(ftmStatus); };
+    uint32_t getFtmDistance();
 
     bool ftmAP(const char* ssid, const char* password);
     bool initiateFtm(uint8_t channel, byte mac[]);

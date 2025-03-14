@@ -12,6 +12,17 @@ const char* WifiManager::getWifiStatusString(WiFiStatus status) {
     }
 };
 
+const char* WifiManager::getWifiFtmStatusString(wifi_ftm_status_t status) {
+    switch (status) {
+        case FTM_STATUS_SUCCESS: return "SUCCESS";
+        case FTM_STATUS_UNSUPPORTED: return "UNSUPPORTED";
+        case FTM_STATUS_CONF_REJECTED: return "CONF_REJECTED";
+        case FTM_STATUS_NO_RESPONSE: return "NO_RESPONSE";
+        case FTM_STATUS_FAIL: return "FAIL";
+        default: return "UNKNOWN";
+    }
+};
+
 bool WifiManager::begin(){
     log.debug("WifiManager", "Initializing WifiManager...");
 
@@ -129,6 +140,14 @@ uint8_t WifiManager::getConnectionAttempts() {
     return connectionAttempts;
 }
 
+wifi_ftm_status_t WifiManager::getFtmStatus() {
+    return ftmStatus;
+}
+
+uint32_t WifiManager::getFtmDistance() {
+    return ftmDistance;
+}
+
 bool WifiManager::ftmAP(const char* ssid, const char* password) {
     return WiFi.softAP(ssid, password, 1, 0, 4, true);
 }
@@ -138,10 +157,6 @@ void WifiManager::onFtmReport(arduino_event_t *event) {
     wifi_event_ftm_report_t *report = &event->event_info.wifi_ftm_report;
     WifiManager::getInstance().ftmStatus = report->status;
     WifiManager::getInstance().ftmDistance = report->dist_est;
-
-    /*char msgBuffer[256];
-    snprintf(msgBuffer, sizeof(msgBuffer), "FTM Report: Status: %s, Distance: %d", WifiManager::getInstance().ftm_status_str[report->status], report->dist_est);
-    WifiManager::getInstance().log.debug("WifiManager", msgBuffer);*/
 
     free(report->ftm_report_data);
     xSemaphoreGive(WifiManager::getInstance().ftmSemaphore);
@@ -181,7 +196,7 @@ int WifiManager::scan(bool ftm = false){
             Serial.printf("| %-32.32s | %4ld | %2ld | %02X:%02X:%02X:%02X:%02X:%02X | %13s | %8.2f |\n",
                         WiFi.SSID(i).c_str(), WiFi.RSSI(i), WiFi.channel(i),
                         WiFi.BSSID(i)[0], WiFi.BSSID(i)[1], WiFi.BSSID(i)[2], WiFi.BSSID(i)[3], WiFi.BSSID(i)[4], WiFi.BSSID(i)[5],
-                        ftm ? ftm_status_str[ftmStatus] : "", (float)ftmDistance / 100.0);
+                        ftm ? getWifiFtmStatusString(ftmStatus) : "", (float)ftmDistance / 100.0);
 
         }
     }

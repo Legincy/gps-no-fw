@@ -42,18 +42,18 @@ bool WifiCommand::initiateFTMCmd(const std::vector<String>& args, ICommandContex
         return false;
     }
 
-    sscanf(args[1].c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", 
+    sscanf(args[3].c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", 
            &mac[0], &mac[1], &mac[2], 
            &mac[3], &mac[4], &mac[5]);
     
-    channel = args[3].toInt();
+    channel = args[1].toInt();
 
-    Serial.printf("Channel: %d\n", channel);
-    Serial.printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", 
-                  mac[0], mac[1], mac[2], 
-                  mac[3], mac[4], mac[5]);
+    Serial.printf("Initiating FTM for channel %d and MAC %02x:%02x:%02x:%02x:%02x:%02x with frame count %d and burst period %d ms\n",
+                  channel, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], configManager.getRuntimeConfig().wifi.ftmFrameCount, configManager.getRuntimeConfig().wifi.ftmBurstPeriod * 100);
 
     WifiManager::getInstance().initiateFtm(channel, mac);
+
+    Serial.printf("FTM Status: %s, Distance: %.2f\n", WifiManager::getInstance().getFtmStatusString(), (float)WifiManager::getInstance().getFtmDistance() / 100.0);
 
     return true;
 }
