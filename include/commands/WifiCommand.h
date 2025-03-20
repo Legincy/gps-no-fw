@@ -44,7 +44,9 @@ public:
             subCommandDescriptions["ftm"] = "FTM for specified network";
             subCommandParameters["ftm"] = {
                 {"--channel", "Channel of the target AP", true, ""},
-                {"--mac", "MAC Adress of the target AP", true, ""}
+                {"--mac", "MAC Adress of the target AP", true, ""},
+                {"--framecount", "Frame count for FTM", false, ""},
+                {"--burstperiod", "Burst period for FTM", false, ""}
             };
 
         }

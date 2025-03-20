@@ -36,20 +36,35 @@ bool WifiCommand::initiateFTMCmd(const std::vector<String>& args, ICommandContex
     
     byte mac[6];
     int channel;
+    int frameCount = configManager.getRuntimeConfig().wifi.ftmFrameCount;
+    int burstPeriod = configManager.getRuntimeConfig().wifi.ftmBurstPeriod;
 
-    if (args.size() < 3) {
-        context.sendResponse("Please provide a MAC address and channel\n");
+    for (int i = 0; i < args.size(); i++) {
+        if (args[i] == "--channel") {
+            channel = args[i + 1].toInt();
+        } else if (args[i] == "--mac") {
+            sscanf(args[i + 1].c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", 
+                   &mac[0], &mac[1], &mac[2], 
+                   &mac[3], &mac[4], &mac[5]);
+        } else if (args[i] == "--framecount") {
+            frameCount = args[i + 1].toInt();
+        } else if (args[i] == "--burstperiod") {
+            burstPeriod = args[i + 1].toInt();
+        }
+    }
+
+    if (mac[0] == 0 && mac[1] == 0 && mac[2] == 0 && mac[3] == 0 && mac[4] == 0 && mac[5] == 0) {
+        context.sendResponse("Please provide a MAC address\n");
         return false;
     }
 
-    sscanf(args[3].c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", 
-           &mac[0], &mac[1], &mac[2], 
-           &mac[3], &mac[4], &mac[5]);
-    
-    channel = args[1].toInt();
+    if (channel == 0) {
+        context.sendResponse("Please provide a channel\n");
+        return false;
+    }
 
     Serial.printf("Initiating FTM for channel %d and MAC %02x:%02x:%02x:%02x:%02x:%02x with frame count %d and burst period %d ms\n",
-                  channel, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], configManager.getRuntimeConfig().wifi.ftmFrameCount, configManager.getRuntimeConfig().wifi.ftmBurstPeriod * 100);
+                  channel, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], frameCount, burstPeriod * 100);
 
     WifiManager::getInstance().initiateFtm(channel, mac);
 
