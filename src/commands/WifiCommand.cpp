@@ -1,16 +1,20 @@
 #include "commands/WifiCommand.h"
 
 bool WifiCommand::startAccessPointCmd(const std::vector<String>& args, ICommandContext& context) {
-    if (args.size() < 2) {
-        context.sendResponse("Please provide an SSID and password\n");
-        return false;
+
+    String ssid;
+    String password;
+
+    for (int i = 0; i < args.size(); i++) {
+        if (args[i] == "--ssid") {
+            ssid = args[i + 1];
+        } else if (args[i] == "--password") {
+            password = args[i + 1];
+        }
     }
 
-    String ssid = args[1];
-    String password = args.size() > 2 ? args[2] : "";
-
-    if (!wifiManager.ftmAP(ssid.c_str(), password.c_str())) {
-        context.sendResponse("Failed to start access point\n");
+    if (ssid.length() == 0) {
+        context.sendResponse("Please provide an SSID\n");
         return false;
     }
 
