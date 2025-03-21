@@ -27,7 +27,11 @@ public:
             subCommandDescriptions["start"] = "Starts the WiFi access point";
             subCommandParameters["start"] = {
                 {"--ssid", "SSID of the target AP", true, ""},
-                {"--password", "Password of the target AP - leave it empty if it is a public network", false, ""}
+                {"--password", "Password of the target AP - leave it empty if it is a public network", false, ""},
+                {"--channel", "Channel of the target AP", false, ""},
+                {"--hidden", "Hide network", false, "false"},
+                {"--maxconnections", "Maximum number of connections", false, "4"},
+                {"--ftm", "Enable FTM support for the AP", false, "true"}
             };
 
             subCommands["scan"] = [this](const std::vector<String>& args, ICommandContext& context) {

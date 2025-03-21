@@ -4,17 +4,35 @@ bool WifiCommand::startAccessPointCmd(const std::vector<String>& args, ICommandC
 
     String ssid;
     String password;
+    u_int8_t channel;
+    bool hidden;
+    int maxConnections;
+    bool ftm;
 
     for (int i = 0; i < args.size(); i++) {
         if (args[i] == "--ssid") {
             ssid = args[i + 1];
         } else if (args[i] == "--password") {
             password = args[i + 1];
+        } else if (args[i] == "--channel") {
+            channel = args[i + 1].toInt();
+        } else if (args[i] == "--hidden") {
+            hidden = args[i + 1] == "true";
+        } else if (args[i] == "--maxconnections") {
+            maxConnections = args[i + 1].toInt();
+        } else if (args[i] == "--ftm") {
+            ftm = args[i + 1] == "true";
         }
     }
 
     if (ssid.length() == 0) {
         context.sendResponse("Please provide an SSID\n");
+        return false;
+    }
+
+    if (!wifiManager.startAP(ssid.c_str(), password.c_str(), channel, hidden, maxConnections, ftm))
+    {
+        context.sendResponse("Failed to start access point\n");
         return false;
     }
 

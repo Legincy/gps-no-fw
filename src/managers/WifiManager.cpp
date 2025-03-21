@@ -148,8 +148,8 @@ uint32_t WifiManager::getFtmDistance() {
     return ftmDistance;
 }
 
-bool WifiManager::ftmAP(const char* ssid, const char* password) {
-    return WiFi.softAP(ssid, password, 1, 0, 4, true);
+bool WifiManager::startAP(const char* ssid, const char* password, uint8_t channel, bool hidden, int maxConnections, bool ftm) {
+    return WiFi.softAP(ssid, password, channel, (hidden ? 1 : 0), maxConnections, ftm);
 }
 
 void WifiManager::onFtmReport(arduino_event_t *event) {

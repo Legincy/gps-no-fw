@@ -73,7 +73,7 @@ public:
     const char* getFtmStatusString() { return getWifiFtmStatusString(ftmStatus); };
     uint32_t getFtmDistance();
 
-    bool ftmAP(const char* ssid, const char* password);
+    bool startAP(const char* ssid, const char* password, uint8_t channel = 1, bool hidden = false, int maxConnections = 4, bool ftm = true);
     bool initiateFtm(uint8_t channel, byte mac[]);
     int scan(bool ftm);
 };
