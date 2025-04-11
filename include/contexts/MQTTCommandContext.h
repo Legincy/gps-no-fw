@@ -14,7 +14,7 @@ public:
 
     void sendResponse(const char *response)
     {
-        DynamicJsonDocument doc(2048);
+        JsonDocument doc;
         doc["type"] = "info";
         doc["source"] = "device";
         doc["payload"] = response;

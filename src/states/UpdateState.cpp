@@ -108,7 +108,7 @@ bool UpdateState::checkLatestRelease()
         return false;
     }
 
-    StaticJsonDocument<1024> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, response);
     if (error)
     {
@@ -262,7 +262,7 @@ void UpdateState::reportProgress(const char *status, int progress)
 {
     if (mqttManager.isConnected())
     {
-        StaticJsonDocument<256> doc;
+        JsonDocument doc;
         doc["status"] = status;
 
         if (progress >= 0)

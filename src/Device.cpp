@@ -64,17 +64,18 @@ void Device::updateDeviceStatus()
 
 void Device::sendDeviceStatus()
 {
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
 
     doc["status"] = "online";
     doc["uptime"] = millis();
     doc["rssi"] = WiFi.RSSI();
     doc["state"] = currentState->getStateIdentifierString();
 
-    JsonObject heap = doc.createNestedObject("heap");
-    heap["free"] = ESP.getFreeHeap();
-    heap["min_free"] = ESP.getMinFreeHeap();
-    heap["max_alloc"] = ESP.getMaxAllocHeap();
+    JsonArray heap = doc["heap"].to<JsonArray>();
+    JsonObject nodeObj = heap.add<JsonObject>();
+    nodeObj["free"] = ESP.getFreeHeap();
+    nodeObj["min_free"] = ESP.getMinFreeHeap();
+    nodeObj["max_alloc"] = ESP.getMaxAllocHeap();
 
     String payload;
     serializeJson(doc, payload);
