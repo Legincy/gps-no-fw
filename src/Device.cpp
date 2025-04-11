@@ -71,11 +71,10 @@ void Device::sendDeviceStatus()
     doc["rssi"] = WiFi.RSSI();
     doc["state"] = currentState->getStateIdentifierString();
 
-    JsonArray heap = doc["heap"].to<JsonArray>();
-    JsonObject nodeObj = heap.add<JsonObject>();
-    nodeObj["free"] = ESP.getFreeHeap();
-    nodeObj["min_free"] = ESP.getMinFreeHeap();
-    nodeObj["max_alloc"] = ESP.getMaxAllocHeap();
+    JsonObject heap = doc["heap"].to<JsonObject>();
+    heap["free"] = ESP.getFreeHeap();
+    heap["min_free"] = ESP.getMinFreeHeap();
+    heap["max_alloc"] = ESP.getMaxAllocHeap();
 
     String payload;
     serializeJson(doc, payload);
