@@ -8,6 +8,7 @@
 #include "managers/MQTTManager.h"
 #include "managers/BluetoothManager.h"
 #include "managers/CommandManager.h"
+#include "managers/UWBManager.h"
 #include "states/ErrorState.h"
 #include "states/ActionState.h"
 #include "states/UpdateState.h"
@@ -29,7 +30,7 @@ class SetupState : public IDeviceState
 {
 private:
     SetupState(Device *device)
-        : IDeviceState(device, StateIdentifier::SETUP_STATE), log(LogManager::getInstance()), commandManager(CommandManager::getInstance()), configManager(ConfigManager::getInstance()), wifiManager(WifiManager::getInstance()), mqttManager(MQTTManager::getInstance()), bluetoothManager(BluetoothManager::getInstance()) {};
+        : IDeviceState(device, StateIdentifier::SETUP_STATE), log(LogManager::getInstance()), commandManager(CommandManager::getInstance()), configManager(ConfigManager::getInstance()), wifiManager(WifiManager::getInstance()), mqttManager(MQTTManager::getInstance()), bluetoothManager(BluetoothManager::getInstance()), uwbManager(UWBManager::getInstance()) {};
 
     LogManager &log;
     ConfigManager &configManager;
@@ -37,6 +38,7 @@ private:
     MQTTManager &mqttManager;
     CommandManager &commandManager;
     BluetoothManager &bluetoothManager;
+    UWBManager &uwbManager;
 
     static const uint32_t SETUP_TIMEOUT = 60000;
     SetupPhase currentPhase;
