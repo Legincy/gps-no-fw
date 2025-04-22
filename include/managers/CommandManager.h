@@ -13,6 +13,7 @@
 #include "commands/WifiCommand.h"
 #include "commands/BluetoothCommand.h"
 #include "commands/HistoryCommand.h"
+#include "commands/UWBCommand.h"
 #include "contexts/MQTTCommandContext.h"
 #include "contexts/SerialCommandContext.h"
 #include "managers/MQTTManager.h"
