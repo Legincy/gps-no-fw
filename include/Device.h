@@ -47,13 +47,14 @@ private:
 
     IDeviceState *currentState;
     uint32_t lastStatusUpdate;
+    uint32_t lastDistancesUpdate;
 
     SerialCommandContext serialContext;
     std::unique_ptr<MQTTCommandContext> mqttContext;
 
     void sendDeviceStatus();
     void updateDeviceStatus();
-
+    void updateDistances();
     const char *getDeviceStatusString(DeviceStatus status);
     constexpr size_t getDeviceStatusCount() { return static_cast<size_t>(DeviceStatus::__DELIMITER__); };
 
