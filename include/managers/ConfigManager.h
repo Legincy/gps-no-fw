@@ -35,6 +35,7 @@ struct RuntimeConfig
         uint64_t chipID;
         char macAddress[ConfigLimits::CONFIG_DEVICE_MAC_ADDRESS_MAX_LENGTH];
         uint32_t statusUpdateInterval;
+        uint32_t distancesUpdateInterval;
     } device;
 
     struct
