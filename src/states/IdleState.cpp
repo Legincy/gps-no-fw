@@ -7,7 +7,7 @@ void IdleState::enter()
 
 void IdleState::update()
 {
-    device->changeState(TestState::getInstance(device));
+    device->changeState(SetupState::getInstance(device));
 }
 
 void IdleState::exit()

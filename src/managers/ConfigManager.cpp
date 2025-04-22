@@ -144,6 +144,7 @@ void ConfigManager::setConfigFromDefines(RuntimeConfig *config)
     /* #### DEVICE #### */
     SAFE_STRLCPY(config->device.name, DEVICE_NAME);
     config->device.statusUpdateInterval = DEVICE_HEARTBEAT_INTERVAL;
+    config->device.distancesUpdateInterval = DEVICE_DISTANCES_UPDATE_INTERVAL;
 
     /* #### WIFI #### */
     SAFE_STRLCPY(config->wifi.ssid, WIFI_SSID);

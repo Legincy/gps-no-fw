@@ -45,7 +45,7 @@ void Device::update()
         log.error("Device", "No current state set");
         return;
     }
-
+    updateDistances();
     updateDeviceStatus();
     currentState->update();
 }
@@ -61,7 +61,23 @@ void Device::updateDeviceStatus()
         lastStatusUpdate = now;
     }
 }
+void Device::updateDistances()
+{
+    RuntimeConfig &config = configManager.getRuntimeConfig();
+    uint32_t now = millis();
 
+    if (now - lastDistancesUpdate >= config.device.distancesUpdateInterval)
+    {
+        JsonDocument doc;
+        if (UWBManager::getInstance().getDistanceJson(doc))
+        {
+            String payload;
+            serializeJson(doc, payload);
+            mqttManager.publish("uwb", payload.c_str(), false);
+        }
+        lastDistancesUpdate = now;
+    }
+}
 void Device::sendDeviceStatus()
 {
     JsonDocument doc;
@@ -75,10 +91,8 @@ void Device::sendDeviceStatus()
     heap["free"] = ESP.getFreeHeap();
     heap["min_free"] = ESP.getMinFreeHeap();
     heap["max_alloc"] = ESP.getMaxAllocHeap();
-
     String payload;
     serializeJson(doc, payload);
-
     mqttManager.publish("status", payload.c_str(), false);
 }
 

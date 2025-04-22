@@ -48,9 +48,9 @@ void SetupState::update()
         }
         // TODO: After initialising the command manager, change the output behaviour of the log manager so that non-essential logs are not printed to the serial monitor, but sent to the buffer instead.
 
-        device->changeState(TestState::getInstance(device));
+        // device->changeState(TestState::getInstance(device));
         // device->changeState(UpdateState::getInstance(device));
-        // evice->changeState(ActionState::getInstance(device));
+        device->changeState(ActionState::getInstance(device));
         break;
     case SetupPhase::FAILED:
         handleSetupFailure();
@@ -84,6 +84,11 @@ bool SetupState::initializeManagers()
     if (!mqttManager.begin())
     {
         log.error("SetupState", "Failed to initialize MQTTManager");
+        return false;
+    }
+    if (!uwbManager.begin())
+    {
+        log.error("SetupState", "Failed to initialize UWBManager");
         return false;
     }
 
@@ -132,7 +137,7 @@ void SetupState::handleMqttConnection()
                 handleConnectionError("MQTT connection failed", ErrorCode::MQTT_CONNECTION_FAILED);
                 return;
             }
-            delay(500);
+            // delay(500);
             return;
         }
     }

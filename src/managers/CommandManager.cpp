@@ -10,6 +10,7 @@ bool CommandManager::begin()
     registerCommand(std::make_shared<WifiCommand>());
     registerCommand(std::make_shared<BluetoothCommand>());
     registerCommand(std::make_shared<HistoryCommand>());
+    registerCommand(std::make_shared<UWBCommand>());
 
     showPrompt();
 

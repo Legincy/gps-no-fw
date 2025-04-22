@@ -2,20 +2,22 @@
 #define TEST_STATE_H
 
 #include <Device.h>
-#include <managers/UltraWidebandManager.h>
+#include <managers/UWBManager.h>
 
 class TestState : public IDeviceState
 {
 private:
     TestState(Device *device)
         : IDeviceState(device, StateIdentifier::TEST_STATE),
+          uwb(UWBManager::getInstance()),
           log(LogManager::getInstance()),
-          configManager(ConfigManager::getInstance()),
-          uwb(UltraWidebandManager::getInstance()) {}
+          configManager(ConfigManager::getInstance())
+    {
+    }
 
     LogManager &log;
     ConfigManager &configManager;
-    UltraWidebandManager &uwb;
+    UWBManager &uwb;
 
 public:
     TestState(const TestState &) = delete;
