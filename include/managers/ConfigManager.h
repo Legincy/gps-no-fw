@@ -12,6 +12,7 @@ namespace ConfigLimits
     constexpr size_t CONFIG_DEVICE_NAME_MAX_LENGTH = 32;
     constexpr size_t CONFIG_DEVICE_FIRMWARE_VERSION_MAX_LENGTH = 16;
     constexpr size_t CONFIG_DEVICE_MAC_ADDRESS_MAX_LENGTH = 18;
+    constexpr size_t CONFIG_UWB_PAYLOAD_MAX_LENGTH = 2048;
     constexpr size_t CONFIG_WIFI_SSID_MAX_LENGTH = 33;
     constexpr size_t CONFIG_WIFI_PASSWORD_MAX_LENGTH = 64;
     constexpr size_t CONFIG_MQTT_BROKER_MAX_LENGTH = 64;
@@ -37,6 +38,12 @@ struct RuntimeConfig
         uint32_t statusUpdateInterval;
         uint32_t distancesUpdateInterval;
     } device;
+
+    struct
+    {
+        char raw_uwb[ConfigLimits::CONFIG_UWB_PAYLOAD_MAX_LENGTH];
+        uint32_t distancesUpdateInterval;
+    } uwb;
 
     struct
     {
@@ -121,6 +128,7 @@ private:
     bool saveToFlash();
     void loadDefaults();
     void setConfigFromDefines(RuntimeConfig *config);
+    bool applyConfigChanges();
 
 public:
     ConfigManager(const ConfigManager &) = delete;
@@ -136,6 +144,7 @@ public:
     bool hasConfigDefinesChanged();
     void updateDeviceConfig();
     void print(RuntimeConfig *config);
+    bool updateUwbRuntimeConfig(const char *uwbPayload);
 };
 
 #endif

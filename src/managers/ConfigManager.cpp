@@ -7,11 +7,21 @@ void ConfigManager::loadDefaults()
     config.device.chipID = ESP.getEfuseMac();
 
     String mac = WiFi.macAddress();
+
     mac.toCharArray(config.device.macAddress, sizeof(config.device.macAddress));
     config.device.macAddress[sizeof(config.device.macAddress) - 1] = '\0';
 
     String modifiedMac = mac;
     modifiedMac.replace(":", "");
+
+    Serial.print("chipID");
+    Serial.println(config.device.chipID);
+
+    Serial.print("macAdress");
+    Serial.println(config.device.macAddress);
+
+    Serial.print("modifiedMac");
+    Serial.println(modifiedMac);
 
     snprintf(config.bluetooth.serviceUUID, sizeof(config.bluetooth.serviceUUID),
              "%s-0000-5000-8000-000000000000",
@@ -81,6 +91,7 @@ void ConfigManager::calculateHash(RuntimeConfig *config, char *hashBuffer, size_
 
     String configString =
         String(config->device.name) +
+        String(config->uwb.raw_uwb) +
         String(config->wifi.ssid) +
         String(config->wifi.password) +
         String(config->mqtt.broker) +
@@ -144,7 +155,9 @@ void ConfigManager::setConfigFromDefines(RuntimeConfig *config)
     /* #### DEVICE #### */
     SAFE_STRLCPY(config->device.name, DEVICE_NAME);
     config->device.statusUpdateInterval = DEVICE_HEARTBEAT_INTERVAL;
-    config->device.distancesUpdateInterval = DEVICE_DISTANCES_UPDATE_INTERVAL;
+
+    /* #### UWB #### */
+    config->uwb.distancesUpdateInterval = DEVICE_DISTANCES_UPDATE_INTERVAL;
 
     /* #### WIFI #### */
     SAFE_STRLCPY(config->wifi.ssid, WIFI_SSID);
@@ -241,4 +254,32 @@ void ConfigManager::updateDeviceConfig()
     loadDefaults();
     saveToFlash();
     Serial.println(F("Updated config"));
+}
+bool ConfigManager::applyConfigChanges()
+{
+    char hashBuf[ConfigLimits::CONFIG_HASH_MAX_LENGTH];
+    calculateHash(&config, hashBuf, sizeof(hashBuf));
+    strncpy(config.hash, hashBuf, sizeof(config.hash));
+    config.hash[sizeof(config.hash) - 1] = '\0';
+
+    if (!saveToFlash())
+    {
+        Serial.println(F("Fehler: konnte geänderte Config nicht speichern"));
+        return false;
+    }
+    return true;
+}
+
+// Update uwb payload
+bool ConfigManager::updateUwbRuntimeConfig(const char *uwbPayload)
+{
+    size_t len = strlen(uwbPayload);
+    if (len >= sizeof(config.uwb.raw_uwb))
+    {
+        Serial.println(F("UWB-Payload zu lang"));
+        return false;
+    }
+    strlcpy(config.uwb.raw_uwb, uwbPayload, sizeof(config.uwb.raw_uwb));
+    Serial.println(config.uwb.raw_uwb);
+    return applyConfigChanges();
 }
