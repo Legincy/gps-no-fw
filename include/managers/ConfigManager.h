@@ -35,6 +35,7 @@ struct RuntimeConfig
         char firmwareVersion[ConfigLimits::CONFIG_DEVICE_FIRMWARE_VERSION_MAX_LENGTH];
         uint64_t chipID;
         char macAddress[ConfigLimits::CONFIG_DEVICE_MAC_ADDRESS_MAX_LENGTH];
+        char modifiedMac[13];
         uint32_t statusUpdateInterval;
         uint32_t distancesUpdateInterval;
     } device;

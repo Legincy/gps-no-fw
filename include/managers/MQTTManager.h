@@ -25,28 +25,15 @@ private:
         : client(espClient), initialized(false), lastAttempt(0), log(LogManager::getInstance()), configManager(ConfigManager::getInstance())
     {
         RuntimeConfig &config = configManager.getRuntimeConfig();
-        uint64_t chipId = config.device.chipID;
-        uint8_t mac[6] = {
-            (uint8_t)((chipId >> 40) & 0xFF),
-            (uint8_t)((chipId >> 32) & 0xFF),
-            (uint8_t)((chipId >> 24) & 0xFF),
-            (uint8_t)((chipId >> 16) & 0xFF),
-            (uint8_t)((chipId >> 8) & 0xFF),
-            (uint8_t)(chipId & 0xFF)};
-        char macStr[13]; // 12 Zeichen + '\0'
-        snprintf(macStr, sizeof(macStr),
-                 "%02x%02x%02x%02x%02x%02x",
-                 mac[0], mac[1], mac[2],
-                 mac[3], mac[4], mac[5]);
         snprintf(deviceTopic, sizeof(deviceTopic),
                  "%s/%s",
                  config.mqtt.baseTopic,
-                 macStr);
+                 config.device.modifiedMac);
         snprintf(clientId, sizeof(clientId),
                  "%s-%s",
                  config.device.name,
-                 macStr);
-        }
+                 config.device.modifiedMac);
+    }
 
     LogManager &log;
     ConfigManager &configManager;
