@@ -10,7 +10,6 @@ bool Device::begin()
 
         return false;
     }
-
     // TODO: Redo the integry check of stored config vs config defines
     if (configManager.hasConfigDefinesChanged())
     {
@@ -66,14 +65,14 @@ void Device::updateDistances()
     RuntimeConfig &config = configManager.getRuntimeConfig();
     uint32_t now = millis();
 
-    if (now - lastDistancesUpdate >= config.device.distancesUpdateInterval)
+    if (now - lastDistancesUpdate >= config.uwb.distancesUpdateInterval)
     {
         JsonDocument doc;
         if (UWBManager::getInstance().getDistanceJson(doc))
         {
             String payload;
             serializeJson(doc, payload);
-            mqttManager.publish("uwb", payload.c_str(), false);
+            mqttManager.publish("uwb/ranging", payload.c_str(), false);
         }
         lastDistancesUpdate = now;
     }
