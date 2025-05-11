@@ -251,25 +251,12 @@ void UWBManager::responder()
 
 bool UWBManager::updateClusterFromServer()
 {
-    // JSON-Dokument parsen
-    const char *payload = R"json(
-        {
-          "uwb": {
-            "type": "TAG",
-            "address": "C4153E8D3A08",
-            "cluster": {
-              "name": "Labor",
-              "devices": [
-                {"address": "F4183E8D3A08", "type": "ANCHOR"},
-                {"address": "FCB30329E748", "type": "ANCHOR"}
-              ]
-            }
-          }
-        }
-        )json";
+    // Beispiel-Payload mit Cluster-Informationen
+    RuntimeConfig &config = configManager.getRuntimeConfig();
+    const char *payload = config.uwb.raw_uwb;
 
-    Node *anchors[MAX_DEVICES - 1];
-    Node *tag;
+    Node *anchors[MAX_DEVICES - 1] = {nullptr};
+    Node *tag = nullptr;
     uint8_t anchorsCount = 0;
 
     JsonDocument doc;
@@ -287,157 +274,133 @@ bool UWBManager::updateClusterFromServer()
         return false;
     }
 
-    // Überprüfe die Adresse aus dem JSON
-    const char *addrStr = uwb["address"];
-    if (addrStr)
-    {
-        uint64_t jsonAddr = strtoull(addrStr, NULL, 16);
-        if (jsonAddr != thisDevice.address)
-        {
-            log.error("UWBManager", "JSON address does not match device address");
-            char addrBuf[17];
-            snprintf(addrBuf, sizeof(addrBuf), "%012llX", thisDevice.address);
-            Serial.print("thisDevice.address: ");
-            Serial.println(addrBuf);
-            return false;
-        }
-    }
-
-    // Lese den Typ aus (TAG oder ANCHOR)
-    const char *typeStr = uwb["type"];
-    if (typeStr)
-    {
-        if (strcmp(typeStr, "TAG") == 0)
-        {
-            thisDevice.type = TAG;
-            tag = &thisDevice;
-        }
-        else if (strcmp(typeStr, "ANCHOR") == 0)
-        {
-            thisDevice.type = ANCHOR;
-            anchors[anchorsCount++] = &thisDevice;
-        }
-    }
-
-    // Verarbeite den Cluster-Block aus dem JSON
     JsonObject cluster = uwb["cluster"];
-    if (!cluster.isNull())
+    if (cluster.isNull())
     {
-        const char *clusterName = cluster["name"];
-        if (clusterName)
-        {
-            strncpy(currentCluster.name, clusterName, sizeof(currentCluster.name) - 1);
-            currentCluster.name[sizeof(currentCluster.name) - 1] = '\0';
-        }
+        log.error("UWBManager", "JSON: 'cluster'-Objekt nicht vorhanden");
+        return false;
+    }
 
-        // Lese das Devices-Array aus dem Cluster-Block
-        JsonArray devices = cluster["devices"];
-        if (!devices.isNull())
+    clearCluster();
+    // Cluster-Namen übernehmen
+    const char *clusterName = cluster["name"];
+    if (clusterName)
+    {
+        strncpy(currentCluster.name, clusterName, sizeof(currentCluster.name) - 1);
+        currentCluster.name[sizeof(currentCluster.name) - 1] = '\0';
+    }
+    // Geräte aus JSON auslesen
+    JsonArray devices = cluster["devices"];
+    if (!devices.isNull())
+    {
+        for (JsonObject deviceObj : devices)
         {
-            // Beginne bei Index 1, da Index 0 bereits thisDevice enthält
-            for (JsonObject deviceObj : devices)
+            // Maximale Gerätezahl prüfen
+            if (currentCluster.deviceCount >= MAX_DEVICES)
+                break;
+
+            Node *pDevice = new Node;
+            // Adresse kopieren
+            const char *devAddrStr = deviceObj["address"];
+            if (devAddrStr)
             {
-                if (currentCluster.deviceCount >= MAX_DEVICES)
-                    break;
-
-                // Verwende currentCluster.devices[currentCluster.deviceCount] als nächsten freien Slot
-                Node *pDevice = new Node;
-                // Lese und konvertiere die Adresse
-                const char *devAddrStr = deviceObj["address"];
-                if (devAddrStr)
+                if (!strcmp(thisDevice.address, devAddrStr))
                 {
-                    pDevice->address = strtoull(devAddrStr, NULL, 16);
+                    pDevice = &thisDevice;
                 }
-                // Lese und setze den Typ
-                const char *devTypeStr = deviceObj["type"];
-                if (devTypeStr)
+                else
                 {
-                    if (strcmp(devTypeStr, "TAG") == 0)
-                    {
-                        pDevice->type = TAG;
-                        tag = pDevice;
-                    }
-                    else if (strcmp(devTypeStr, "ANCHOR") == 0)
-                    {
-                        pDevice->type = ANCHOR;
-                        anchors[anchorsCount++] = pDevice;
-                    }
+                    strncpy(pDevice->address, devAddrStr, sizeof(pDevice->address) - 1);
+                    pDevice->address[sizeof(pDevice->address) - 1] = '\0';
+                }
+            }
+            // Gerätetyp setzen
+            const char *devTypeStr = deviceObj["type"];
+            if (devTypeStr)
+            {
+                if (strcmp(devTypeStr, "TAG") == 0)
+                {
+                    pDevice->type = TAG;
+                    tag = pDevice;
+                }
+                else if (strcmp(devTypeStr, "ANCHOR") == 0)
+                {
+                    pDevice->type = ANCHOR;
+                    anchors[anchorsCount++] = pDevice;
                 }
             }
         }
     }
 
-    // Sortieren Anchors
-    for (int i = 0; i < anchorsCount - 1; i++)
+    // Anchors lexikographisch sortieren
+    for (int i = 0; i + 1 < anchorsCount; i++)
     {
         for (int j = i + 1; j < anchorsCount; j++)
         {
-            if (anchors[i]->address > anchors[j]->address)
+            if (strcmp(anchors[i]->address, anchors[j]->address) > 0)
             {
-                Node *temp = anchors[i];
+                Node *tmp = anchors[i];
                 anchors[i] = anchors[j];
-                anchors[j] = temp;
+                anchors[j] = tmp;
             }
         }
     }
-    // Füge Tag und Anchors zu currentCluster *devices array vergeben UID
-    if (tag != nullptr)
+
+    // Gerätereihenfolge: Tag zuerst, dann Anchors
+    if (tag)
     {
         currentCluster.devices[currentCluster.deviceCount++] = tag;
     }
-    // Füge dann alle sortierten Anchors hinzu.
     for (int i = 0; i < anchorsCount; i++)
     {
         currentCluster.devices[currentCluster.deviceCount++] = anchors[i];
     }
-    // UID-Zuweisung:
-    // Das Tag (Index 0) erhält immer UID 14.
-    if (currentCluster.deviceCount > 0)
-    {
-        currentCluster.devices[0]->UID = 14;
-        currentCluster.devices[0]->WAIT_NUM = 0;
-    }
-    // Ab Index 1 erhalten die Geräte (Anchors) in Schritten von 4:
-    for (int i = 1; i < currentCluster.deviceCount; i++)
+
+    // UID- und WAIT_NUM-Zuweisung
+    for (int i = 0; i < currentCluster.deviceCount; i++)
     {
         currentCluster.devices[i]->UID = 14 + (i * 4);
         currentCluster.devices[i]->WAIT_NUM = i;
     }
+
+    // Debug-Ausgabe: thisDevice
+    Serial.println("----- thisDevice -----");
+    Serial.print("Address:   ");
+    Serial.println(thisDevice.address);
+    Serial.print("Type:      ");
+    Serial.println(thisDevice.type == TAG ? "TAG" : "ANCHOR");
+    Serial.print("UID:       ");
+    Serial.println(thisDevice.UID);
+    Serial.print("WAIT_NUM:  ");
+    Serial.println(thisDevice.WAIT_NUM);
+    Serial.println("----------------------");
+
+    // Debug-Ausgabe: currentCluster
+    Serial.println("----- currentCluster -----");
+    Serial.print("Cluster Name: ");
+    Serial.println(currentCluster.name);
+    Serial.print("Device Count: ");
+    Serial.println(currentCluster.deviceCount);
+    for (int i = 0; i < currentCluster.deviceCount; i++)
+    {
+        Node *d = currentCluster.devices[i];
+        Serial.print("Device ");
+        Serial.print(i);
+        Serial.print(" - Address: ");
+        Serial.print(d->address);
+        Serial.print(", Type: ");
+        Serial.print(d->type == TAG ? "TAG" : "ANCHOR");
+        Serial.print(", UID: ");
+        Serial.print(d->UID);
+        Serial.print(", WAIT_NUM: ");
+        Serial.println(d->WAIT_NUM);
+    }
+    Serial.println("----------------------------");
+
     char msg[128];
     snprintf(msg, sizeof(msg), "Updated Nodes from %s", currentCluster.name);
     log.info("UWBManager", msg);
-    // Debug-Ausgabe
-    // Serial.println("----- UWBManager DebugPrint -----");
-    // Serial.print("thisDevice.type: ");
-    // Serial.println((thisDevice.type == TAG) ? "TAG" : "ANCHOR");
 
-    // char addrBuf[17];
-    // snprintf(addrBuf, sizeof(addrBuf), "%012llX", thisDevice.address);
-    // Serial.print("thisDevice.address: ");
-    // Serial.println(addrBuf);
-
-    // Serial.print("Cluster name: ");
-    // Serial.println(currentCluster.name);
-
-    // Serial.print("Anzahl Devices: ");
-    // Serial.println(currentCluster.deviceCount);
-
-    // for (int i = 0; i < currentCluster.deviceCount; i++)
-    // {
-    //     char devAddrBuf[17];
-    //     snprintf(devAddrBuf, sizeof(devAddrBuf), "%012llX", currentCluster.devices[i]->address);
-    //     Serial.print(" Device ");
-    //     Serial.print(i);
-    //     Serial.print(" - Type: ");
-    //     Serial.print((currentCluster.devices[i]->type == TAG) ? "TAG" : "ANCHOR");
-    //     Serial.print(", Address: ");
-    //     Serial.print(devAddrBuf);
-    //     Serial.print(", UID: ");
-    //     Serial.print(currentCluster.devices[i]->UID);
-    //     Serial.print(", WAIT_NUM: ");
-    //     Serial.println(currentCluster.devices[i]->WAIT_NUM);
-    // }
-    // Serial.println("---------------------------------");
     return true;
 }
 
@@ -690,25 +653,19 @@ bool UWBManager::getDistanceJson(JsonDocument &doc)
     {
         return false;
     }
-    char addrStr[13];
-    snprintf(addrStr, sizeof(addrStr), "%012llX", thisDevice.address);
 
-    doc["type"] = (thisDevice.type == TAG) ? "TAG" : "ANCHOR";
-    doc["address"] = addrStr;
+    doc.clear();
+    JsonArray arr = doc.to<JsonArray>();
 
-    JsonObject cluster = doc["cluster"].to<JsonObject>();
-    cluster["name"] = currentCluster.name;
-
-    JsonArray devices = cluster["devices"].to<JsonArray>();
-    for (uint8_t i = 1; i < currentCluster.deviceCount; i++)
+    for (uint8_t i = 1; i < currentCluster.deviceCount; ++i)
     {
         Node *dev = currentCluster.devices[i];
-        char devAddrStr[13];
-        snprintf(devAddrStr, sizeof(devAddrStr), "%012llX", dev->address);
-        JsonObject devObj = devices.add<JsonObject>();
-        devObj["address"] = devAddrStr;
-        devObj["type"] = (dev->type == TAG) ? "TAG" : "ANCHOR";
-        devObj["raw_distance"] = dev->raw_distance;
+        JsonObject entry = arr.add<JsonObject>();
+        entry["source_address"] = thisDevice.address;
+        entry["destination_address"] = dev->address;
+        JsonObject dist = entry.createNestedObject("distance");
+        dist["raw_distance"] = dev->raw_distance;
+        dist["scaled_distance"] = dev->raw_distance;
     }
     return true;
 }

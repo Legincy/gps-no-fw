@@ -14,14 +14,7 @@ void ConfigManager::loadDefaults()
     String modifiedMac = mac;
     modifiedMac.replace(":", "");
 
-    Serial.print("chipID");
-    Serial.println(config.device.chipID);
-
-    Serial.print("macAdress");
-    Serial.println(config.device.macAddress);
-
-    Serial.print("modifiedMac");
-    Serial.println(modifiedMac);
+    strncpy(config.device.modifiedMac, modifiedMac.c_str(), sizeof(config.device.modifiedMac));
 
     snprintf(config.bluetooth.serviceUUID, sizeof(config.bluetooth.serviceUUID),
              "%s-0000-5000-8000-000000000000",

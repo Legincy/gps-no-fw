@@ -44,15 +44,16 @@ enum UWBState
 enum DeviceType
 {
     TAG = 0,
-    ANCHOR = 1
+    ANCHOR = 1,
+    NONE = -1
 };
 
 struct Node
 {
-    uint64_t address;
-    uint8_t UID = 0;
-    uint8_t WAIT_NUM = 0;
-    DeviceType type;
+    char address[13];
+    uint8_t UID = 99;
+    uint8_t WAIT_NUM = 99;
+    DeviceType type = NONE;
     float raw_distance = 0;
 };
 
@@ -88,13 +89,17 @@ class UWBManager
 {
 private:
     // Privater Konstruktor (Singleton)
-    UWBManager() : log(LogManager::getInstance())
+    UWBManager() : log(LogManager::getInstance()), configManager(ConfigManager::getInstance())
     {
-        thisDevice.address = ESP.getEfuseMac(); // type uint64_t
+        RuntimeConfig &config = configManager.getRuntimeConfig();
+        Node node;
+        thisDevice = node;
+        strncpy(thisDevice.address, config.device.modifiedMac, sizeof(thisDevice.address));
     }
 
     UWBState currentState = NOT_INIT;
     LogManager &log;
+    ConfigManager &configManager;
     float distances[MAX_DEVICES - 1];
     Node thisDevice;
     Cluster currentCluster;
