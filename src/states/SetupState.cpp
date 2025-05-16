@@ -142,18 +142,18 @@ void SetupState::handleMqttConnection()
         }
     }
 
-    // subscribeDefaultTopics();
+    subscribeDefaultTopics();
 }
 
 void SetupState::subscribeDefaultTopics()
 {
     RuntimeConfig &config = configManager.getRuntimeConfig();
-    String deviceTopic = String(mqttManager.getDeviceTopic()) + "/#";
+    // String deviceTopic = String(mqttManager.getDeviceTopic()) + "/#";
 
-    mqttManager.subscribe(deviceTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
-                          { handleDeviceMessage(topic, payload, length); });
+    // mqttManager.subscribe(deviceTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
+    //                       { handleDeviceMessage(topic, payload, length); });
 
-    String configTopic = String(mqttManager.getDeviceTopic()) + "/config";
+    String configTopic = String(mqttManager.getDeviceTopic()) + "/device/raw";
     mqttManager.subscribe(configTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
                           { handleConfigMessage(topic, payload, length); });
 }
@@ -166,16 +166,19 @@ void SetupState::handleDeviceMessage(const char *topic, const uint8_t *payload, 
 
     char logMessage[1024];
     snprintf(logMessage, sizeof(logMessage), "Received message on topic %s: %s", topic, message);
-    log.debug("SetupState", logMessage);
+    // log.debug("SetupState", logMessage);
+    Serial.println(logMessage);
 }
 
 void SetupState::handleConfigMessage(const char *topic, const uint8_t *payload, unsigned int length)
 {
-    char message[length + 1];
-    memcpy(message, payload, length);
-    message[length] = '\0';
-
-    log.info("SetupState", "Received config update");
+    char payload_char[length + 1];
+    memcpy(payload_char, payload, length);
+    payload_char[length] = '\0';
+    if (configManager.updateUwbRuntimeConfig(payload_char))
+    {
+        log.info("SetupState", "Received config update and update successful");
+    }
 }
 
 void SetupState::handleConnectionError(const char *message, ErrorCode errorCode)

@@ -72,7 +72,7 @@ void Device::updateDistances()
         {
             String payload;
             serializeJson(doc, payload);
-            mqttManager.publish("uwb/ranging", payload.c_str(), false);
+            mqttManager.publish("uwb/ranging", payload.c_str(), true);
         }
         lastDistancesUpdate = now;
     }

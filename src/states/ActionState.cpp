@@ -7,8 +7,8 @@ void ActionState::enter()
 
 void ActionState::update()
 {
-    // MQTTManager::getInstance().update();
-    UWBManager::getInstance().loop();
+    MQTTManager::getInstance().update();
+    UWBManager::getInstance().loop(); //Todo 
 }
 
 void ActionState::exit()

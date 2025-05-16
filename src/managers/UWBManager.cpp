@@ -661,8 +661,8 @@ bool UWBManager::getDistanceJson(JsonDocument &doc)
     {
         Node *dev = currentCluster.devices[i];
         JsonObject entry = arr.add<JsonObject>();
-        entry["source_address"] = thisDevice.address;
-        entry["destination_address"] = dev->address;
+        entry["source_device"] = thisDevice.address;
+        entry["destination_device"] = dev->address;
         JsonObject dist = entry.createNestedObject("distance");
         dist["raw_distance"] = dev->raw_distance;
         dist["scaled_distance"] = dev->raw_distance;

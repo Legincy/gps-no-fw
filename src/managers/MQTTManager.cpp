@@ -6,10 +6,10 @@ void MQTTManager::handleCallback(char *topic, uint8_t *payload, uint32_t length)
     memcpy(message, payload, length);
     message[length] = '\0';
 
-    char msgBuffer[128];
-    snprintf(msgBuffer, sizeof(msgBuffer), "Received message on topic '%s': '%s'", topic, message);
-    log.debug("MQTTManager", msgBuffer);
-
+    // char msgBuffer[1024];
+    // snprintf(msgBuffer, sizeof(msgBuffer), "Received message on topic '%s': '%s'", topic, message);
+    // log.debug("MQTTManager", msgBuffer);
+    // Serial.println(msgBuffer);
     // log.debug("MQTTManager", "Checking subscriptions:");
     for (const auto &subscription : subscriptions)
     {
