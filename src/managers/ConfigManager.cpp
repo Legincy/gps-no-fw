@@ -13,6 +13,7 @@ void ConfigManager::loadDefaults()
 
     String modifiedMac = mac;
     modifiedMac.replace(":", "");
+    modifiedMac.toLowerCase();
 
     strncpy(config.device.modifiedMac, modifiedMac.c_str(), sizeof(config.device.modifiedMac));
 
