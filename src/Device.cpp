@@ -67,12 +67,30 @@ void Device::updateDistances()
 
     if (now - lastDistancesUpdate >= config.uwb.distancesUpdateInterval)
     {
-        JsonDocument doc;
-        if (UWBManager::getInstance().getDistanceJson(doc))
+        Cluster cluster = UWBManager::getInstance().getCluster(); 
+
+        // Für jedes Gerät im Cluster (außer sich selbst) eine Nachricht senden
+        for (int i = 0; i < cluster.deviceCount; ++i)
         {
-            String payload;
-            serializeJson(doc, payload);
-            mqttManager.publish("uwb/ranging", payload.c_str(), true);
+            Node *device = cluster.devices[i];
+            // Überspringe das eigene Gerät
+            if (strcmp(device->address, config.device.modifiedMac) == 0)
+            {
+                continue;
+            }
+
+            JsonDocument doc;
+            if (UWBManager::getInstance().getDistanceJson(doc, device))
+            {
+                String payload;
+                serializeJson(doc, payload);
+
+                char measurementTopic[256];
+                snprintf(measurementTopic, sizeof(measurementTopic), "%s/measurements/%s", MQTT_BASE_TOPIC, config.device.modifiedMac);
+
+                // Nachricht mit "isAbsoluteTopic = true" senden
+                mqttManager.publish(measurementTopic, payload.c_str(), false, true);
+            }
         }
         lastDistancesUpdate = now;
     }

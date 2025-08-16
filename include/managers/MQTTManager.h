@@ -26,7 +26,7 @@ private:
     {
         RuntimeConfig &config = configManager.getRuntimeConfig();
         snprintf(stationTopic, sizeof(stationTopic),
-                 "%s/%s",
+                 "%s/stations/%s",
                  config.mqtt.baseTopic,
                  config.device.modifiedMac);
         snprintf(clientId, sizeof(clientId),
@@ -73,7 +73,7 @@ public:
 
     PubSubClient &getClient() { return client; }
     const char *getClientId() { return clientId; }
-    const char *getstationTopic() { return stationTopic; }
+    const char *getStationTopic() { return stationTopic; }
 };
 
 #endif

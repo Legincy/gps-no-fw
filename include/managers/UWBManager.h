@@ -142,6 +142,11 @@ public:
      */
     void responder();
 
+    // Methode, um den Gerätetyp von außen zu setzen
+    void setDeviceType(const char *typeStr);
+
+    bool updateClusterFromMqtt(const char *payload);
+
     float *getDistances();
 
     bool updateClusterFromServer();
@@ -161,8 +166,10 @@ public:
     void responderSendFinal();
     void processResponderMessage();
     void changeState(UWBState state);
-    bool getDistanceJson(JsonDocument &doc);
+
+    bool getDistanceJson(JsonDocument &doc, const Node *targetDevice);
     void clearCluster();
+    Cluster &getCluster() { return currentCluster; };
 };
 
 // Gemeinsame Hilfsfunktionen
