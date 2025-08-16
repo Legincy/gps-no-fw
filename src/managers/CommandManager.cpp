@@ -16,7 +16,7 @@ bool CommandManager::begin()
 
     mqttContext = std::unique_ptr<MQTTCommandContext>(new MQTTCommandContext());
 
-    String mqttCommandTopic = String(mqttManager.getDeviceTopic()) + "/console";
+    String mqttCommandTopic = String(mqttManager.getstationTopic()) + "/console";
     mqttManager.subscribe(mqttCommandTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
                           { handleMQTTCommand(topic, payload, length); }, false);
 

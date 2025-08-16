@@ -14,13 +14,13 @@
 #define WIFI_FTM_FRAME_COUNT 16
 #define WIFI_FTM_BURST_PERIOD 2
 
-#define MQTT_BROKER "" // Todo: Delete
+#define MQTT_BROKER "mq.mini4.de" // Todo: Delete
 #define MQTT_PORT 1883
 #define MQTT_USER "gpsno"
-#define MQTT_PASSWORD "" // Todo: Delete
+#define MQTT_PASSWORD "S%&n@b5LHnog4tV5" // Todo: Delete
 #define MQTT_RETRY_INTERVAL 5000
 #define MQTT_MAX_CONNECTION_ATTEMPTS 20
-#define MQTT_BASE_TOPIC "gpsno/devices"
+#define MQTT_BASE_TOPIC "gpsno/v1"
 
 #define BLUETOOTH_TIMEOUT 5000
 #define BLUETOOTH_MAX_CONNECTIONS 3

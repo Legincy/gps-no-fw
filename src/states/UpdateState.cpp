@@ -274,7 +274,7 @@ void UpdateState::reportProgress(const char *status, int progress)
             doc["version"] = newVersion;
         }
 
-        String topic = String(mqttManager.getDeviceTopic()) + "/update";
+        String topic = String(mqttManager.getstationTopic()) + "/update";
         String payload;
         serializeJson(doc, payload);
 

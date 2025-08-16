@@ -25,7 +25,7 @@ private:
         : client(espClient), initialized(false), lastAttempt(0), log(LogManager::getInstance()), configManager(ConfigManager::getInstance())
     {
         RuntimeConfig &config = configManager.getRuntimeConfig();
-        snprintf(deviceTopic, sizeof(deviceTopic),
+        snprintf(stationTopic, sizeof(stationTopic),
                  "%s/%s",
                  config.mqtt.baseTopic,
                  config.device.modifiedMac);
@@ -44,7 +44,7 @@ private:
     uint32_t lastAttempt;
     uint8_t connectionAttempts;
     std::vector<Subscription> subscriptions;
-    char deviceTopic[128];
+    char stationTopic[128];
     char clientId[64];
 
     void handleSubscriptions();
@@ -73,7 +73,7 @@ public:
 
     PubSubClient &getClient() { return client; }
     const char *getClientId() { return clientId; }
-    const char *getDeviceTopic() { return deviceTopic; }
+    const char *getstationTopic() { return stationTopic; }
 };
 
 #endif

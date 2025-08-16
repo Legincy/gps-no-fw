@@ -227,7 +227,7 @@ bool MQTTManager::publish(const char *subtopic, const char *payload, bool isReta
     }
     else
     {
-        snprintf(fullTopic, sizeof(fullTopic), "%s/%s", deviceTopic, subtopic);
+        snprintf(fullTopic, sizeof(fullTopic), "%s/%s", stationTopic, subtopic);
     }
 
     if (client.publish(fullTopic, payload, isRetained))

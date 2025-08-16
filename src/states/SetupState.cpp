@@ -148,12 +148,12 @@ void SetupState::handleMqttConnection()
 void SetupState::subscribeDefaultTopics()
 {
     RuntimeConfig &config = configManager.getRuntimeConfig();
-    // String deviceTopic = String(mqttManager.getDeviceTopic()) + "/#";
+    // String stationTopic = String(mqttManager.getstationTopic()) + "/#";
 
-    // mqttManager.subscribe(deviceTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
+    // mqttManager.subscribe(stationTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
     //                       { handleDeviceMessage(topic, payload, length); });
 
-    String configTopic = String(mqttManager.getDeviceTopic()) + "/device/raw";
+    String configTopic = String(mqttManager.getstationTopic()) + "/device/raw";
     mqttManager.subscribe(configTopic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
                           { handleConfigMessage(topic, payload, length); });
 }
