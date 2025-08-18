@@ -222,17 +222,14 @@ void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, 
 // NEU: Funktion zur Verarbeitung der Cluster-Info aus /gpsno/v1/clusters/<ID>
 void SetupState::handleClusterConfig(const char *topic, const uint8_t *payload, unsigned int length)
 {
-    delay(1000);
     log.info("SetupState", "Received cluster configuration.");
     char payload_char[length + 1];
     memcpy(payload_char, payload, length);
     payload_char[length] = '\0';
 
-    // Die rohe Payload direkt an den UWBManager weitergeben zur Verarbeitung
     if (uwbManager.updateClusterFromMqtt(payload_char))
     {
         log.info("SetupState", "UWB cluster updated successfully.");
-        // UWB-Manager in den CLUSTER_UPDATE-Status versetzen, um die neuen Daten zu laden
         uwbManager.changeState(CLUSTER_UPDATE);
     }
     else

@@ -691,7 +691,7 @@ bool UWBManager::updateClusterFromMqtt(const char *payload)
     if (error)
     {
         char buffer[128];
-        snprintf(buffer, sizeof(buffer), "JSON Deserialization failed for cluster config: %s", error.c_str());
+        snprintf(buffer, sizeof(buffer), "JSON Deserialization failed: %s", error.c_str());
         log.error("UWBManager", buffer);
         return false;
     }
@@ -699,7 +699,7 @@ bool UWBManager::updateClusterFromMqtt(const char *payload)
     JsonObject data = doc["data"];
     if (data.isNull())
     {
-        log.error("UWBManager", "JSON 'data' object not found in cluster config");
+        log.error("UWBManager", "JSON 'data' object not found in cluster payload.");
         return false;
     }
 
@@ -713,54 +713,58 @@ bool UWBManager::updateClusterFromMqtt(const char *payload)
     }
 
     JsonArray stations = data["stations"];
-    if (!stations.isNull())
+    if (stations.isNull())
     {
-        // KORRIGIERTE SCHLEIFE: Iteriert über Objekte im Array
-        for (JsonObject stationObj : stations)
-        {
-            if (currentCluster.deviceCount >= MAX_DEVICES)
-                break;
-
-            const char *devAddrStr = stationObj["address"];
-            const char *devTypeStr = stationObj["type"];
-
-            if (!devAddrStr || !devTypeStr)
-                continue; // Überspringe ungültige Einträge
-
-            Node *pDevice;
-
-            // Prüfen, ob es sich um das eigene Gerät handelt
-            if (strcmp(thisDevice.address, devAddrStr) == 0)
-            {
-                pDevice = &thisDevice;
-            }
-            else
-            {
-                pDevice = new Node; // Speicher für neue Nodes allokieren
-                strncpy(pDevice->address, devAddrStr, sizeof(pDevice->address) - 1);
-                pDevice->address[sizeof(pDevice->address) - 1] = '\0';
-            }
-
-            // Gerätetyp aus der Cluster-Nachricht setzen (dies ist die maßgebliche Quelle)
-            if (strcmp(devTypeStr, "TAG") == 0)
-            {
-                pDevice->type = TAG;
-            }
-            else if (strcmp(devTypeStr, "ANCHOR") == 0)
-            {
-                pDevice->type = ANCHOR;
-            }
-            else
-            {
-                pDevice->type = NONE;
-            }
-
-            currentCluster.devices[currentCluster.deviceCount++] = pDevice;
-        }
+        log.error("UWBManager", "JSON 'stations' array not found in cluster payload.");
+        return false;
     }
 
-    // Sortierung der Geräte (optional, aber empfohlen für konsistente UIDs)
-    // Hier wird sichergestellt, dass der TAG (falls vorhanden) immer an erster Stelle steht.
+    // Die Payload-Struktur verarbeiten
+    for (JsonObject station : stations)
+    {
+        if (currentCluster.deviceCount >= MAX_DEVICES)
+            break;
+
+        const char *mac = station["mac_address"];
+        if (!mac)
+            continue;
+
+        JsonObject config = station["config"];
+        JsonObject uwb_config = config["uwb"];
+        const char *mode = uwb_config["mode"];
+        if (!mode)
+            continue;
+
+        Node *pDevice;
+        if (strcmp(thisDevice.address, mac) == 0)
+        {
+            pDevice = &thisDevice;
+        }
+        else
+        {
+            pDevice = new Node;
+            strncpy(pDevice->address, mac, sizeof(pDevice->address) - 1);
+            pDevice->address[sizeof(pDevice->address) - 1] = '\0';
+        }
+
+        // Den UWB-Modus direkt aus der Payload setzen
+        if (strcmp(mode, "TAG") == 0)
+        {
+            pDevice->type = TAG;
+        }
+        else if (strcmp(mode, "ANCHOR") == 0)
+        {
+            pDevice->type = ANCHOR;
+        }
+        else
+        {
+            pDevice->type = NONE;
+        }
+
+        currentCluster.devices[currentCluster.deviceCount++] = pDevice;
+    }
+
+    // Sortierung der Geräte
     for (int i = 0; i < currentCluster.deviceCount; ++i)
     {
         if (currentCluster.devices[i]->type == TAG)
@@ -772,15 +776,15 @@ bool UWBManager::updateClusterFromMqtt(const char *payload)
         }
     }
 
-    // UID- und WAIT_NUM-Zuweisung basierend auf der sortierten Liste
+    // UID- und WAIT_NUM-Zuweisung
     for (int i = 0; i < currentCluster.deviceCount; i++)
     {
         currentCluster.devices[i]->UID = 14 + (i * 4);
         currentCluster.devices[i]->WAIT_NUM = i;
     }
 
-    log.info("UWBManager", "Cluster data processed.");
-    debugPrint(); // Zur Überprüfung der geladenen Konfiguration
+    log.info("UWBManager", "Cluster data processed successfully.");
+    debugPrint(); // Zur Überprüfung
 
     return true;
 }
