@@ -174,14 +174,6 @@ void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, 
         return;
     }
 
-    // Prüfen, ob die Nachricht vom Server kommt, um Schleifen zu vermeiden
-    const char *source = doc["source"];
-    if (source && strcmp(source, "SERVER") != 0)
-    {
-        log.debug("SetupState", "Ignoring station config message not from SERVER.");
-        return;
-    }
-
     JsonObject data = doc["data"];
     if (data.isNull())
         return;
@@ -202,9 +194,9 @@ void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, 
     }
 
     // Wenn eine Cluster-ID vorhanden ist, das entsprechende Cluster-Topic abonnieren
-    if (uwbConfig.containsKey("cluster") && !uwbConfig["cluster"].isNull())
+    if (uwbConfig.containsKey("cluster_id") && !uwbConfig["cluster_id"].isNull())
     {
-        int clusterId = uwbConfig["cluster"];
+        int clusterId = uwbConfig["cluster_id"];
         log.info("SetupState", "Device belongs to cluster, subscribing...");
         char clusterTopic[128];
         snprintf(clusterTopic, sizeof(clusterTopic), "%s/clusters/%d", MQTT_BASE_TOPIC, clusterId);
