@@ -660,7 +660,7 @@ bool UWBManager::getDistanceJson(JsonDocument &doc, const Node *targetDevice)
     data["target"] = targetDevice->address;
     data["distance"] = targetDevice->raw_distance;
 
-    doc["sender"] = "DEVICE";
+    doc["source"] = "DEVICE";
 
     return true;
 }
