@@ -139,6 +139,7 @@ public:
     bool hasConfigDefinesChanged();
     void updateDeviceConfig();
     void print(RuntimeConfig *config);
+    bool setClusterId(uint8_t newClusterId);
 };
 
 #endif

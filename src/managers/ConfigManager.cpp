@@ -260,3 +260,16 @@ bool ConfigManager::applyConfigChanges()
     }
     return true;
 }
+
+bool ConfigManager::setClusterId(uint8_t newClusterId)
+{
+    if (config.device.cluster_id == newClusterId)
+    {
+        return true;
+    }
+
+    config.device.cluster_id = newClusterId;
+    Serial.printf("Cluster ID changce to %d.\n", newClusterId);
+
+    return (applyConfigChanges());
+}

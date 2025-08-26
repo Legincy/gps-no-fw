@@ -158,7 +158,6 @@ void SetupState::subscribeDefaultTopics()
                           { handleStationConfig(topic, payload, length); });
 }
 
-// NEUE: Funktion zur Verarbeitung der Konfiguration aus /gpsno/v1/stations/<MAC>
 void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, unsigned int length)
 {
     log.info("SetupState", "Received station configuration.");
@@ -170,40 +169,44 @@ void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, 
     DeserializationError error = deserializeJson(doc, payload_char);
     if (error)
     {
-        log.error("SetupState", "Failed to parse station config JSON");
+        char buffer[128];
+        snprintf(buffer, sizeof(buffer), "Failed to parse station config JSON: %s", error.c_str());
+        log.error("SetupState", buffer);
         return;
     }
 
     JsonObject data = doc["data"];
     if (data.isNull())
-        return;
-
-    JsonObject config = data["config"];
-    if (config.isNull())
-        return;
-
-    JsonObject uwbConfig = config["uwb"];
-    if (uwbConfig.isNull())
-        return;
-
-    // UWB Modus (ANCHOR/TAG) aus der Konfig lesen und im UWBManager setzen
-    const char *mode = uwbConfig["mode"];
-    if (mode)
     {
-        UWBManager::getInstance().setDeviceType(mode);
+        log.error("SetupState", "JSON 'data' object not found.");
+        return;
     }
 
-    // Wenn eine Cluster-ID vorhanden ist, das entsprechende Cluster-Topic abonnieren
-    if (uwbConfig.containsKey("cluster_id") && !uwbConfig["cluster_id"].isNull())
-    {
-        int clusterId = uwbConfig["cluster_id"];
-        log.info("SetupState", "Device belongs to cluster, subscribing...");
-        char clusterTopic[128];
-        snprintf(clusterTopic, sizeof(clusterTopic), "%s/clusters/%d", MQTT_BASE_TOPIC, clusterId);
+    JsonObject config = data["config"];
+    JsonObject uwbConfig = config["uwb"];
 
-        // Cluster-Topic abonnieren
-        mqttManager.subscribe(clusterTopic, [this](const char *topic, const uint8_t *payload, unsigned int length)
-                              { handleClusterConfig(topic, payload, length); });
+    if (!uwbConfig.isNull())
+    {
+        const char *mode = uwbConfig["mode"];
+        if (mode)
+        {
+            UWBManager::getInstance().setDeviceType(mode);
+        }
+    }
+
+    if (!data["cluster_id"].isNull())
+    {
+        int clusterId = data["cluster_id"];
+        if (ConfigManager::getInstance().setClusterId(clusterId))
+        {
+            char msg[128];
+            snprintf(msg, sizeof(msg), "Station belong to cluster with id: %d", clusterId);
+            log.info("SetupState", msg);
+        }
+        else
+        {
+            log.error("SetupState", "Cannot set clusterId");
+        }
     }
     else
     {

@@ -65,9 +65,9 @@ void Device::updateDistances()
     RuntimeConfig &config = configManager.getRuntimeConfig();
     uint32_t now = millis();
 
-    if (now - lastDistancesUpdate >= config.uwb.distancesUpdateInterval)
+    if (now - lastDistancesUpdate >= config.device.distancesUpdateInterval)
     {
-        Cluster cluster = UWBManager::getInstance().getCluster(); 
+        Cluster cluster = UWBManager::getInstance().getCluster();
 
         // Für jedes Gerät im Cluster (außer sich selbst) eine Nachricht senden
         for (int i = 0; i < cluster.deviceCount; ++i)
