@@ -272,3 +272,17 @@ bool MQTTManager::isConnected()
 {
     return client.connected();
 }
+String MQTTManager::getClusterTopic()
+{
+    RuntimeConfig &config = configManager.getRuntimeConfig();
+    if (config.device.cluster_id > 0)
+    {
+        char buffer[128];
+        snprintf(buffer, sizeof(buffer),
+                 "/%s/cluster/%d",
+                 config.mqtt.baseTopic,
+                 config.device.cluster_id);
+        return String(buffer);
+    }
+    return String();
+}

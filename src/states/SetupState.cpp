@@ -86,12 +86,6 @@ bool SetupState::initializeManagers()
         log.error("SetupState", "Failed to initialize MQTTManager");
         return false;
     }
-    if (!uwbManager.begin())
-    {
-        log.error("SetupState", "Failed to initialize UWBManager");
-        return false;
-    }
-
     return true;
 }
 
@@ -211,7 +205,7 @@ void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, 
     else
     {
         log.info("SetupState", "Device is not assigned to a cluster.");
-        uwbManager.changeState(IDLE);
+        uwbManager.changeState(UWB_NOT_INIT);
     }
 }
 // NEU: Funktion zur Verarbeitung der Cluster-Info aus /gpsno/v1/clusters/<ID>
@@ -225,7 +219,6 @@ void SetupState::handleClusterConfig(const char *topic, const uint8_t *payload, 
     if (uwbManager.updateClusterFromMqtt(payload_char))
     {
         log.info("SetupState", "UWB cluster updated successfully.");
-        uwbManager.changeState(CLUSTER_UPDATE);
     }
     else
     {
@@ -243,4 +236,37 @@ void SetupState::handleConnectionError(const char *message, ErrorCode errorCode)
 void SetupState::handleSetupFailure()
 {
     device->changeState(ErrorState::getInstance(device));
+}
+
+bool SetupState::subscribeToClusterTopic()
+{
+    String topic = mqttManager.getClusterTopic();
+
+    if (topic.length() > 0)
+    {
+        char log_msg[192];
+        snprintf(log_msg, sizeof(log_msg), "Subscribing to cluster topic: %s", topic.c_str());
+        log.info("SetupState", log_msg);
+
+        return mqttManager.subscribe(topic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
+                                     { handleClusterConfig(topic, payload, length); });
+    }
+
+    log.warning("SetupState", "Cluster ID not set, cannot subscribe to cluster topic.");
+    return false;
+}
+
+bool SetupState::unsubscribeFromClusterTopic()
+{
+    String topic = mqttManager.getClusterTopic();
+    if (topic.length() > 0)
+    {
+        char log_msg[192];
+        snprintf(log_msg, sizeof(log_msg), "Unsubscribing from cluster topic: %s", topic.c_str());
+        log.info("SetupState", log_msg);
+
+        return mqttManager.unsubscribe(topic.c_str());
+    }
+    log.info("SetupState", "Cluster ID not set, no topic to unsubscribe from.");
+    return true;
 }

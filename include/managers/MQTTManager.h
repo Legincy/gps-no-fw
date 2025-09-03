@@ -74,6 +74,7 @@ public:
     PubSubClient &getClient() { return client; }
     const char *getClientId() { return clientId; }
     const char *getStationTopic() { return stationTopic; }
+    String getClusterTopic();
 };
 
 #endif

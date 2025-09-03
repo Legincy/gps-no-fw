@@ -4,11 +4,11 @@ void TestState::enter()
 {
     log.info("TestState", "Entering TestState");
 
-    if (!uwb.begin())
+    if (!uwb.init())
     {
         log.error("TestState", "Failed to initialize UWBManager");
     }
-    uwb.changeState(CLUSTER_UPDATE);
+    uwb.changeState(UWB_SETUP);
 }
 
 void TestState::update()
