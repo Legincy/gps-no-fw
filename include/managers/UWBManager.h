@@ -1,177 +1,112 @@
-#ifndef UWB_MANAGER_H
-#define UWB_MANAGER_H
+#pragma once
 
-#include "LogManager.h"
+#ifndef UWBManager_H
+#define UWBManager_H
+
 #include "dw3000.h"
+#include "Frame_802_15_4.h"
 #include "ArduinoJson.h"
-#include "SPI.h"
 
-#define INTERVAL 5
-#define TX_ANT_DLY 16385
-#define RX_ANT_DLY 16385
+static const uint8_t FUNC_CODE_POLL = 0xE2, FUNC_CODE_ACK = 0xE3, FUNC_CODE_RANGE = 0xE4,
+                     FUNC_CODE_FINAL = 0xE5, FUNC_CODE_RESET = 0xE6,
+                     FUNC_CODE_DISCOVERY_BROADCAST = 0xD1, FUNC_CODE_DISCOVERY_BLINK = 0xD2,
+                     FUNC_CODE_RANGING_CONFIG = 0x20;
 
-#define UWB_RST 27
-#define UWB_IRQ 34
-#define UWB_SS 4
-#define FUNC_CODE_POLL 0xE2
-#define FUNC_CODE_ACK 0xE3
-#define FUNC_CODE_RANGE 0xE4
-#define FUNC_CODE_FINAL 0xE5
-#define FUNC_CODE_RESET 0xE6
+// --- MAX NODES ---
+static const int MAX_NODES = 7;
 
-#define MSG_LEN 16      /* message length */
-#define BUF_LEN MSG_LEN /* buffer length */
-#define MSG_SN_IDX 2    /* sequence number */
-#define MSG_SID_IDX 7   /* source id */
-#define MSG_FUNC_IDX 9  /* func code*/
-
-#define MSG_T_REPLY_IDX 10 /* byte index of transmitter ts */
-#define RESP_MSG_TS_LEN 4
-#define TX_TO_RX_DLY_UUS 100
-#define RX_TO_TX_DLY_UUS 800
-#define RX_TIMEOUT_UUS 400000
-
-#define MAX_DEVICES 10 // Maximale Anzahl von Geräten im Cluster
-
-enum UWBState
-{
-    NOT_INIT = 0,
-    IDLE = 1,
-    CLUSTER_UPDATE = 2,
-    READY = 3
-};
-
-enum DeviceType
-{
-    TAG = 0,
-    ANCHOR = 1,
-    NONE = -1
-};
-
-struct Node
-{
-    char address[13];
-    uint8_t UID = 99;
-    uint8_t WAIT_NUM = 99;
-    DeviceType type = NONE;
-    float raw_distance = 0;
-};
-
-struct Cluster
-{
-    char name[20];
-    Node *devices[MAX_DEVICES];
-    uint8_t deviceCount = 0;
-};
-
-extern uint8_t tx_msg[], rx_msg[];
-extern uint8_t frame_seq_nb;
-extern uint8_t rx_buffer[BUF_LEN];
-// extern int target_uids[NUM_DW3000 - 1];
-extern uint32_t status_reg;
-extern bool wait_poll, wait_ack, wait_range, wait_final;
-extern int counter;
-extern int ret;
-
-extern uint64_t poll_tx_ts, poll_rx_ts, range_tx_ts, ack_tx_ts, range_rx_ts;
-extern uint32_t t_reply_1[MAX_DEVICES - 1];
-extern uint64_t t_reply_2;
-extern uint64_t t_round_1[MAX_DEVICES - 1];
-extern uint32_t t_round_2[MAX_DEVICES - 1];
-// extern uint8_t target_uids[];
-extern double tof, distance;
-extern unsigned long previous_debug_millis, current_debug_millis;
-extern int millis_since_last_serial_print;
-extern uint32_t tx_time;
-extern uint64_t tx_ts;
-extern float clockOffsetRatioAck, clockOffsetRatioFinal;
 class UWBManager
 {
-private:
-    // Privater Konstruktor (Singleton)
-    UWBManager() : log(LogManager::getInstance()), configManager(ConfigManager::getInstance())
-    {
-        RuntimeConfig &config = configManager.getRuntimeConfig();
-        Node node;
-        thisDevice = node;
-        strncpy(thisDevice.address, config.device.modifiedMac, sizeof(thisDevice.address));
-    }
-
-    UWBState currentState = NOT_INIT;
-    LogManager &log;
-    ConfigManager &configManager;
-    float distances[MAX_DEVICES - 1];
-    Node thisDevice;
-    Cluster currentCluster;
-    uint8_t target_uids[MAX_DEVICES - 1];
-    uint8_t tx_msg[MSG_LEN] = {0x41, 0x88, 0, 0xCA, 0xDE, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t rx_msg[MSG_LEN] = {0x41, 0x88, 0, 0xCA, 0xDE, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 0};
-
 public:
-    /**
-     * @brief Gibt die Singleton-Instanz von UWBManager zurück.
-     *
-     * @return Referenz auf die einzige Instanz von UWBManager.
-     */
-    static UWBManager &getInstance()
+    static UWBManager &getInstance();
+    // --- Öffentliche Strukturen & Enums ---
+    enum DeviceState
     {
-        static UWBManager instance;
-        return instance;
-    }
+        DISCOVERY,
+        RANGING
+    };
+    struct RangingPartner
+    {
+        uint64_t mac_address;
+        uint8_t uid;
+        double distance;
+    };
 
-    /**
-     * @brief Startet den UWB-Betrieb.
-     *
-     * Führt alle notwendigen Initialisierungen für UWB durch.
-     */
-    bool begin();
+    UWBManager(UWBManager const &) = delete;
+    void operator=(UWBManager const &) = delete;
 
-    /**
-     * @brief Führt die Initiator-Routine aus.
-     *
-     * Diese Methode kann als Startpunkt für eine UWB-Initiator-Routine verwendet werden.
-     */
+    // --- Öffentliche Methoden ---
+    void start_uwb();
     void initiator();
-
-    /**
-     * @brief Führt die Responder-Routine aus.
-     *
-     * Diese Methode kann als Startpunkt für eine UWB-Responder-Routine verwendet werden.
-     */
     void responder();
+    void setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices);
+    bool isRangingCycleComplete() const;
+    void resetRangingCycleStatus();
+    bool performRangingCycleAndCreatePayload(JsonDocument *jsonData);
+    const RangingPartner *getKnownDevices() const;
+    int getKnownDevicesCount() const;
+    uint64_t getMyMacAddress() const;
 
-    // Methode, um den Gerätetyp von außen zu setzen
-    void setDeviceType(const char *typeStr);
+private:
+    UWBManager(); // Privater Konstruktor
 
-    bool updateClusterFromMqtt(const char *payload);
-
-    float *getDistances();
-
-    bool updateClusterFromServer();
-
-    void debugPrint();
-    void loop();
+    // --- Private Hilfsfunktionen ---
+    void updateKnownDevices(uint64_t mac, uint8_t uid);
+    void updateDistance(uint8_t uid, double new_distance);
     void set_target_uids();
-    uint32_t waitForReceptionEvent(uint32_t eventMask);
-    bool sendTxMessage(uint8_t *msg, uint16_t len, uint32_t txFlags);
+    void print_frame_data(const uint8_t *data, uint16_t length);
 
-    // // Initiator-spezifische Funktionen
-    void initiatorSendPoll();
-    void initiatorSendRange();
+    // --- Private Konstanten ---
+    static const int INTERVAL = 5;
+    static const int UWB_RST = 27, UWB_IRQ = 34, UWB_SS = 4;
 
-    // // Responder-spezifische Funktionen
-    void responderSendAck();
-    void responderSendFinal();
-    void processResponderMessage();
-    void changeState(UWBState state);
+    static const uint16_t TX_ANT_DLY = 16385, RX_ANT_DLY = 16385;
+    static const int TX_TO_RX_DLY_UUS = 100, RX_TO_TX_DLY_UUS = 800, RX_TIMEOUT_UUS = 400000;
+    static const int BUF_LEN = 127;
+    static const int DISCOVERY_WINDOW_MS = 200;
+    static const int MAX_RESPONSE_DELAY_MS = 50;
 
-    bool getDistanceJson(JsonDocument &doc, const Node *targetDevice);
-    void clearCluster();
-    Cluster &getCluster() { return currentCluster; };
+    // --- Private Member-Variablen ---
+    // Ranging & Device Config
+    uint8_t UID, INITIATOR_UID;
+    int NUM_NODES, WAIT_NUM;
+    DeviceState deviceState;
+    uint64_t myMacAddress;
+    bool m_rangingCycleCompleted;
+
+    // Messages & Buffers
+    Frame_802_15_4 txMessage, rxMessage;
+    uint8_t rx_buffer[BUF_LEN];
+    uint8_t frame_seq_nb;
+
+    // Status & Logic Flow
+    uint32_t status_reg;
+    int target_uids[MAX_NODES - 1];
+    bool wait_poll, wait_ack, wait_range, wait_final;
+    int counter, ret;
+
+    // Discovery
+    uint64_t discovered_macs[MAX_NODES - 1];
+    int discovered_count;
+
+    // Known Devices
+    RangingPartner known_devices[MAX_NODES];
+    int known_devices_count;
+
+    // Timestamps
+    uint64_t poll_tx_ts, poll_rx_ts, range_tx_ts, ack_tx_ts, range_rx_ts;
+    uint32_t t_reply_1[MAX_NODES - 1];
+    uint64_t t_reply_2;
+    uint64_t t_round_1[MAX_NODES - 1];
+    uint32_t t_round_2[MAX_NODES - 1];
+    uint32_t tx_time;
+    uint64_t tx_ts;
+
+    // Calculated values
+    double tof, distance;
+
+    // Debug
+    unsigned long previous_debug_millis, current_debug_millis;
 };
-
-// Gemeinsame Hilfsfunktionen
 
 #endif
