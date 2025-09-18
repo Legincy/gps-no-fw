@@ -1,6 +1,6 @@
 #include "Frame_802_15_4.h"
 #include "managers/UWBManager.h"
-#include "WiFi.h"
+#include "managers/ConfigManager.h"
 #include <Arduino.h>
 #include <algorithm>
 #include <vector>
@@ -60,12 +60,10 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
 
 void UWBManager::start_uwb()
 {
-    WiFi.mode(WIFI_MODE_STA);
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    myMacAddress = ((uint64_t)mac[0] << 40) | ((uint64_t)mac[1] << 32) |
-                   ((uint64_t)mac[2] << 24) | ((uint64_t)mac[3] << 16) |
-                   ((uint64_t)mac[4] << 8) | (uint64_t)mac[5];
+    ConfigManager &configManager = ConfigManager::getInstance();
+    const RuntimeConfig &runtimeconfig = configManager.getRuntimeConfig();
+    const char *modifiedMacStr = runtimeconfig.device.modifiedMac;
+    myMacAddress = strtoull(modifiedMacStr, NULL, 16);
 
     spiBegin(UWB_IRQ, UWB_RST);
     spiSelect(UWB_SS);
@@ -94,14 +92,8 @@ void UWBManager::start_uwb()
     dwt_setrxantennadelay(RX_ANT_DLY);
     dwt_settxantennadelay(TX_ANT_DLY);
     dwt_setrxaftertxdelay(TX_TO_RX_DLY_UUS);
-    dwt_setrxtimeout(RX_TIMEOUT_UUS); // TODO
+    dwt_setrxtimeout(0); // TODO
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
-
-    char macStr[18];
-    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    Serial.print("My UWB MAC Address: ");
-    Serial.println(macStr);
-    Serial.println("UWB Setup complete.");
 }
 
 void UWBManager::setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices)
@@ -115,6 +107,7 @@ void UWBManager::setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssigne
 
 void UWBManager::initiator()
 {
+    dwt_setrxtimeout(RX_TIMEOUT_UUS);
     if (deviceState == DISCOVERY)
     {
         if (INITIATOR_UID == 0)
