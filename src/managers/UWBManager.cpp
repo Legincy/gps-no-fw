@@ -30,14 +30,12 @@ static dwt_config_t config = {
 
 extern dwt_txconfig_t txconfig_options;
 
-// --- Singleton Implementierung ---
 UWBManager &UWBManager::getInstance()
 {
     static UWBManager instance;
     return instance;
 }
 
-// --- Konstruktor Implementierung ---
 UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
                            deviceState(DISCOVERY), myMacAddress(0), frame_seq_nb(0),
                            status_reg(0), wait_poll(true), wait_ack(false), wait_range(false),
@@ -47,7 +45,6 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
                            previous_debug_millis(0), current_debug_millis(0), tx_time(0), tx_ts(0),
                            m_rangingCycleCompleted(false)
 {
-    // Arrays bei der Initialisierung leeren
     memset(target_uids, 0, sizeof(target_uids));
     memset(discovered_macs, 0, sizeof(discovered_macs));
     memset(known_devices, 0, sizeof(known_devices));
@@ -55,8 +52,6 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
     memset(t_round_1, 0, sizeof(t_round_1));
     memset(t_round_2, 0, sizeof(t_round_2));
 }
-
-// --- Öffentliche Methoden Implementierung ---
 
 void UWBManager::start_uwb()
 {
@@ -442,8 +437,6 @@ void UWBManager::responder()
     }
 }
 
-// --- Private Hilfsfunktionen Implementierung ---
-
 void UWBManager::updateKnownDevices(uint64_t mac, uint8_t uid)
 {
     for (int i = 0; i < known_devices_count; i++)
@@ -451,7 +444,7 @@ void UWBManager::updateKnownDevices(uint64_t mac, uint8_t uid)
         if (known_devices[i].mac_address == mac)
         {
             known_devices[i].uid = uid;
-            known_devices[i].distance = -1; // -1 als Indikator für "noch nicht gemessen"
+            known_devices[i].distance = -1;
             return;
         }
     }
@@ -519,20 +512,19 @@ bool UWBManager::performRangingCycleAndCreatePayload(JsonDocument *jsonData)
         char sourceMacStr[18];
         mac_uint64_to_str(this->myMacAddress, sourceMacStr);
         (*jsonData)["source"] = sourceMacStr;
-        JsonObject data = (*jsonData)["data"].to<JsonObject>();
-        data["type"] = "uwb";
-        JsonArray results = data["results"].to<JsonArray>();
+        JsonArray data = (*jsonData)["data"].to<JsonArray>();
 
         for (const auto &device : sorted_devices)
         {
             if (device.distance > 0)
             {
-                JsonObject result = results.add<JsonObject>();
+                JsonObject result = data.add<JsonObject>();
                 char targetMacStr[18];
                 mac_uint64_to_str(device.mac_address, targetMacStr);
-
-                result["target_mac"] = targetMacStr;
-                result["distance"] = serialized(String(device.distance, 2));
+                result["value"] = device.distance;
+                result["type"] = "UWB";
+                result["unit"] = "METER";
+                result["target"] = targetMacStr;
             }
         }
         return true;

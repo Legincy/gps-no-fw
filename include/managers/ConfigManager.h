@@ -37,7 +37,7 @@ struct RuntimeConfig
         char modifiedMac[13];
         uint32_t statusUpdateInterval;
         uint32_t distancesUpdateInterval;
-        uint8_t cluster_id;
+        bool isTag;
     } device;
 
     struct
@@ -139,7 +139,8 @@ public:
     bool hasConfigDefinesChanged();
     void updateDeviceConfig();
     void print(RuntimeConfig *config);
-    bool setClusterId(uint8_t newClusterId);
+    bool isDeviceTag() const;
+    bool setDeviceIsTag(bool newIsTag);
 };
 
 #endif

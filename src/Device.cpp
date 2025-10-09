@@ -44,7 +44,6 @@ void Device::update()
         log.error("Device", "No current state set");
         return;
     }
-    updateDistances();
     updateDeviceStatus();
     currentState->update();
 }
@@ -60,41 +59,7 @@ void Device::updateDeviceStatus()
         lastStatusUpdate = now;
     }
 }
-void Device::updateDistances()
-{
-    RuntimeConfig &config = configManager.getRuntimeConfig();
-    uint32_t now = millis();
 
-    if (now - lastDistancesUpdate >= config.device.distancesUpdateInterval)
-    {
-        Cluster cluster = UWBManager::getInstance().getCluster();
-
-        // Für jedes Gerät im Cluster (außer sich selbst) eine Nachricht senden
-        for (int i = 0; i < cluster.deviceCount; ++i)
-        {
-            Node *device = cluster.devices[i];
-            // Überspringe das eigene Gerät
-            if (strcmp(device->address, config.device.modifiedMac) == 0)
-            {
-                continue;
-            }
-
-            JsonDocument doc;
-            if (UWBManager::getInstance().getDistanceJson(doc, device))
-            {
-                String payload;
-                serializeJson(doc, payload);
-
-                char measurementTopic[256];
-                snprintf(measurementTopic, sizeof(measurementTopic), "%s/measurements/%s", MQTT_BASE_TOPIC, config.device.modifiedMac);
-
-                // Nachricht mit "isAbsoluteTopic = true" senden
-                mqttManager.publish(measurementTopic, payload.c_str(), false, true);
-            }
-        }
-        lastDistancesUpdate = now;
-    }
-}
 void Device::sendDeviceStatus()
 {
     JsonDocument doc;

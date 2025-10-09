@@ -56,8 +56,7 @@ private:
     void handleClusterConfig(const char *topic, const uint8_t *payload, unsigned int length);
     const char *getSetupPhaseString(SetupPhase phase);
     constexpr size_t getSetupPhaseCount() { return static_cast<size_t>(SetupPhase::__DELIMITER__); };
-    bool subscribeToClusterTopic(); 
-    bool unsubscribeFromClusterTopic();
+
 public:
     SetupState(const SetupState &) = delete;
     void operator=(const SetupState &) = delete;

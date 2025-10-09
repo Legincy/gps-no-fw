@@ -149,6 +149,7 @@ void ConfigManager::setConfigFromDefines(RuntimeConfig *config)
     SAFE_STRLCPY(config->device.name, DEVICE_NAME);
     config->device.statusUpdateInterval = DEVICE_HEARTBEAT_INTERVAL;
     config->device.distancesUpdateInterval = DEVICE_DISTANCES_UPDATE_INTERVAL;
+    config->device.isTag = false;
 
     /* #### WIFI #### */
     SAFE_STRLCPY(config->wifi.ssid, WIFI_SSID);
@@ -261,15 +262,16 @@ bool ConfigManager::applyConfigChanges()
     return true;
 }
 
-bool ConfigManager::setClusterId(uint8_t newClusterId)
+bool ConfigManager::isDeviceTag() const
 {
-    if (config.device.cluster_id == newClusterId)
+    return config.device.isTag;
+}
+bool ConfigManager::setDeviceIsTag(bool newIsTag)
+{
+    if (config.device.isTag == newIsTag)
     {
         return true;
     }
-
-    config.device.cluster_id = newClusterId;
-    Serial.printf("Cluster ID changce to %d.\n", newClusterId);
-
-    return (applyConfigChanges());
+    config.device.isTag = newIsTag;
+    return applyConfigChanges();
 }

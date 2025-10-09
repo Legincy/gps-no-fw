@@ -54,7 +54,6 @@ private:
 
     void sendDeviceStatus();
     void updateDeviceStatus();
-    void updateDistances();
     const char *getDeviceStatusString(DeviceStatus status);
     constexpr size_t getDeviceStatusCount() { return static_cast<size_t>(DeviceStatus::__DELIMITER__); };
 

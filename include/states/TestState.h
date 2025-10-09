@@ -9,7 +9,7 @@ class TestState : public IDeviceState
 private:
     TestState(Device *device)
         : IDeviceState(device, StateIdentifier::TEST_STATE),
-          uwb(UWBManager::getInstance()),
+        //   uwb(UWBManager::getInstance()),
           log(LogManager::getInstance()),
           configManager(ConfigManager::getInstance())
     {
@@ -17,7 +17,7 @@ private:
 
     LogManager &log;
     ConfigManager &configManager;
-    UWBManager &uwb;
+    // UWBManager &uwb;
 
 public:
     TestState(const TestState &) = delete;

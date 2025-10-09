@@ -7,6 +7,7 @@
 #include "Frame_802_15_4.h"
 #include "ArduinoJson.h"
 
+// Function code
 static const uint8_t FUNC_CODE_POLL = 0xE2, FUNC_CODE_ACK = 0xE3, FUNC_CODE_RANGE = 0xE4,
                      FUNC_CODE_FINAL = 0xE5, FUNC_CODE_RESET = 0xE6,
                      FUNC_CODE_DISCOVERY_BROADCAST = 0xD1, FUNC_CODE_DISCOVERY_BLINK = 0xD2,
@@ -39,22 +40,11 @@ public:
     void start_uwb();
     void initiator();
     void responder();
-    void setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices);
-    bool isRangingCycleComplete() const;
-    void resetRangingCycleStatus();
     bool performRangingCycleAndCreatePayload(JsonDocument *jsonData);
     const RangingPartner *getKnownDevices() const;
-    int getKnownDevicesCount() const;
-    uint64_t getMyMacAddress() const;
 
 private:
     UWBManager(); // Privater Konstruktor
-
-    // --- Private Hilfsfunktionen ---
-    void updateKnownDevices(uint64_t mac, uint8_t uid);
-    void updateDistance(uint8_t uid, double new_distance);
-    void set_target_uids();
-    void print_frame_data(const uint8_t *data, uint16_t length);
 
     // --- Private Konstanten ---
     static const int INTERVAL = 5;
@@ -84,7 +74,6 @@ private:
     int target_uids[MAX_NODES - 1];
     bool wait_poll, wait_ack, wait_range, wait_final;
     int counter, ret;
-
     // Discovery
     uint64_t discovered_macs[MAX_NODES - 1];
     int discovered_count;
@@ -107,6 +96,17 @@ private:
 
     // Debug
     unsigned long previous_debug_millis, current_debug_millis;
+
+    // --- Private Hilfsfunktionen ---
+    int getKnownDevicesCount() const;
+    uint64_t getMyMacAddress() const;
+    void setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices);
+    bool isRangingCycleComplete() const;
+    void resetRangingCycleStatus();
+    void updateKnownDevices(uint64_t mac, uint8_t uid);
+    void updateDistance(uint8_t uid, double new_distance);
+    void set_target_uids();
+    void print_frame_data(const uint8_t *data, uint16_t length);
 };
 
 #endif

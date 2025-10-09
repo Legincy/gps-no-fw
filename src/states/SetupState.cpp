@@ -86,6 +86,8 @@ bool SetupState::initializeManagers()
         log.error("SetupState", "Failed to initialize MQTTManager");
         return false;
     }
+    uwbManager.start_uwb(); // TODO
+
     return true;
 }
 
@@ -184,45 +186,23 @@ void SetupState::handleStationConfig(const char *topic, const uint8_t *payload, 
         const char *mode = uwbConfig["mode"];
         if (mode)
         {
-            UWBManager::getInstance().setDeviceType(mode);
+            if (strcmp(mode, "TAG") == 0)
+            {
+                log.info("SetupState", "Setting device role to TAG.");
+                if (!configManager.setDeviceIsTag(true))
+                {
+                    log.error("SetupState", "Failed to save role change to TAG.");
+                }
+            }
+            else if (strcmp(mode, "ANCHOR") == 0)
+            {
+                log.info("SetupState", "Setting device role to ANCHOR.");
+                if (!configManager.setDeviceIsTag(false))
+                {
+                    log.error("SetupState", "Failed to save role change to ANCHOR.");
+                }
+            }
         }
-    }
-
-    if (!data["cluster_id"].isNull())
-    {
-        int clusterId = data["cluster_id"];
-        if (ConfigManager::getInstance().setClusterId(clusterId))
-        {
-            char msg[128];
-            snprintf(msg, sizeof(msg), "Station belong to cluster with id: %d", clusterId);
-            log.info("SetupState", msg);
-        }
-        else
-        {
-            log.error("SetupState", "Cannot set clusterId");
-        }
-    }
-    else
-    {
-        log.info("SetupState", "Device is not assigned to a cluster.");
-        uwbManager.changeState(UWB_NOT_INIT);
-    }
-}
-// NEU: Funktion zur Verarbeitung der Cluster-Info aus /gpsno/v1/clusters/<ID>
-void SetupState::handleClusterConfig(const char *topic, const uint8_t *payload, unsigned int length)
-{
-    log.info("SetupState", "Received cluster configuration.");
-    char payload_char[length + 1];
-    memcpy(payload_char, payload, length);
-    payload_char[length] = '\0';
-
-    if (uwbManager.updateClusterFromMqtt(payload_char))
-    {
-        log.info("SetupState", "UWB cluster updated successfully.");
-    }
-    else
-    {
-        log.error("SetupState", "Failed to update UWB cluster.");
     }
 }
 
@@ -236,37 +216,4 @@ void SetupState::handleConnectionError(const char *message, ErrorCode errorCode)
 void SetupState::handleSetupFailure()
 {
     device->changeState(ErrorState::getInstance(device));
-}
-
-bool SetupState::subscribeToClusterTopic()
-{
-    String topic = mqttManager.getClusterTopic();
-
-    if (topic.length() > 0)
-    {
-        char log_msg[192];
-        snprintf(log_msg, sizeof(log_msg), "Subscribing to cluster topic: %s", topic.c_str());
-        log.info("SetupState", log_msg);
-
-        return mqttManager.subscribe(topic.c_str(), [this](const char *topic, const uint8_t *payload, unsigned int length)
-                                     { handleClusterConfig(topic, payload, length); });
-    }
-
-    log.warning("SetupState", "Cluster ID not set, cannot subscribe to cluster topic.");
-    return false;
-}
-
-bool SetupState::unsubscribeFromClusterTopic()
-{
-    String topic = mqttManager.getClusterTopic();
-    if (topic.length() > 0)
-    {
-        char log_msg[192];
-        snprintf(log_msg, sizeof(log_msg), "Unsubscribing from cluster topic: %s", topic.c_str());
-        log.info("SetupState", log_msg);
-
-        return mqttManager.unsubscribe(topic.c_str());
-    }
-    log.info("SetupState", "Cluster ID not set, no topic to unsubscribe from.");
-    return true;
 }

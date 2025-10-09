@@ -1,4 +1,5 @@
 #include "managers/MQTTManager.h"
+#include "managers/UWBManager.h"
 
 void MQTTManager::handleCallback(char *topic, uint8_t *payload, uint32_t length)
 {
@@ -272,17 +273,12 @@ bool MQTTManager::isConnected()
 {
     return client.connected();
 }
-String MQTTManager::getClusterTopic()
+
+bool MQTTManager::publishMeasurement(const char *payload)
 {
-    RuntimeConfig &config = configManager.getRuntimeConfig();
-    if (config.device.cluster_id > 0)
-    {
-        char buffer[128];
-        snprintf(buffer, sizeof(buffer),
-                 "/%s/cluster/%d",
-                 config.mqtt.baseTopic,
-                 config.device.cluster_id);
-        return String(buffer);
-    }
-    return String();
+    const char *macAddress = configManager.getRuntimeConfig().device.modifiedMac;
+    char fullTopic[128];
+    snprintf(fullTopic, sizeof(fullTopic), "%s/measurements/%s", MQTT_BASE_TOPIC, macAddress);
+
+    return publish(fullTopic, payload, false, true);
 }

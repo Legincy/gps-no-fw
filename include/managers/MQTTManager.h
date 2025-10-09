@@ -7,6 +7,7 @@
 #include <vector>
 #include "ConfigManager.h"
 #include "LogManager.h"
+// #include "UWBManager.h"
 
 typedef std::function<void(char *, uint8_t *, unsigned int)> MQTTCallback;
 
@@ -22,7 +23,7 @@ class MQTTManager
 {
 private:
     MQTTManager()
-        : client(espClient), initialized(false), lastAttempt(0), log(LogManager::getInstance()), configManager(ConfigManager::getInstance())
+        : client(espClient), initialized(false), lastAttempt(0), log(LogManager::getInstance()), configManager(ConfigManager::getInstance()) //, uwbManager(UWBManager::getInstance())
     {
         RuntimeConfig &config = configManager.getRuntimeConfig();
         snprintf(stationTopic, sizeof(stationTopic),
@@ -37,7 +38,7 @@ private:
 
     LogManager &log;
     ConfigManager &configManager;
-
+    // UWBManager &uwbManager;
     WiFiClient espClient;
     PubSubClient client;
     bool initialized;
@@ -67,6 +68,7 @@ public:
     bool subscribe(const char *topic, MQTTCallback callback, bool isPersistent = false);
     bool unsubscribe(const char *topic);
     bool publish(const char *topic, const char *payload, bool isRetained = false, bool isAbsoluteTopic = false);
+    bool publishMeasurement(const char *payload);
     void update();
     bool isConnected();
     bool isSubscribed(const char *topic);
@@ -74,7 +76,6 @@ public:
     PubSubClient &getClient() { return client; }
     const char *getClientId() { return clientId; }
     const char *getStationTopic() { return stationTopic; }
-    String getClusterTopic();
 };
 
 #endif

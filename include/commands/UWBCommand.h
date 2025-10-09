@@ -9,15 +9,16 @@ static TaskHandle_t xUWBCmdHandle;
 class UWBCommand : public IExtendedCommand
 {
 private:
-    UWBManager &uwbManager;
+    // UWBManager &uwbManager;
     ConfigManager &configManager;
 
     bool startUWBCmd(const std::vector<String> &args, ICommandContext &context);
     bool stopUWBCmd(const std::vector<String> &args, ICommandContext &context);
+    TaskHandle_t uwbTaskHandle = NULL;
 
 public:
     UWBCommand()
-        : uwbManager(UWBManager::getInstance()),
+        : // uwbManager(UWBManager::getInstance()),
           configManager(ConfigManager::getInstance())
     {
         xUWBCmdHandle = nullptr;
