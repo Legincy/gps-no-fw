@@ -5,11 +5,26 @@
 #include <algorithm>
 #include <vector>
 
+volatile bool g_new_message_received = false;
+volatile bool g_rx_error = false;
+volatile uint16_t g_received_frame_len = 0;
+
 static void mac_uint64_to_str(uint64_t mac, char *str)
 {
     sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
             (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),
             (uint8_t)(mac >> 16), (uint8_t)(mac >> 8), (uint8_t)(mac));
+}
+
+static void rx_ok_cb(const dwt_cb_data_t *cb_data)
+{
+    g_received_frame_len = cb_data->datalength;
+    g_new_message_received = true;
+}
+
+static void rx_err_cb(const dwt_cb_data_t *cb_data)
+{
+    g_rx_error = true;
 }
 
 // DW3000-Konfiguration
@@ -62,13 +77,15 @@ void UWBManager::start_uwb()
 
     spiBegin(UWB_IRQ, UWB_RST);
     spiSelect(UWB_SS);
-
+    delay(200);
     while (!dwt_checkidlerc())
     {
         Serial.println("IDLE FAILED");
         while (1)
             ;
     }
+    dwt_softreset();
+    delay(200);
     if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR)
     {
         Serial.println("INIT FAILED");
@@ -83,12 +100,21 @@ void UWBManager::start_uwb()
             ;
     }
 
+    pinMode(UWB_IRQ, INPUT_PULLUP);
+    dwt_setcallbacks(NULL, rx_ok_cb, rx_err_cb, rx_err_cb, NULL, NULL);
+    dwt_setinterrupt(SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK | SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK, 0x0, DWT_ENABLE_INT_ONLY);
+    attachInterrupt(digitalPinToInterrupt(UWB_IRQ), dwt_isr, RISING);
+    dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
+
     dwt_configuretxrf(&txconfig_options);
     dwt_setrxantennadelay(RX_ANT_DLY);
     dwt_settxantennadelay(TX_ANT_DLY);
     dwt_setrxaftertxdelay(TX_TO_RX_DLY_UUS);
     dwt_setrxtimeout(0); // TODO
+    // dwt_setrxtimeout(RX_TIMEOUT_UUS);
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+    //
+    dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 
 void UWBManager::setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices)
@@ -295,94 +321,75 @@ void UWBManager::initiator()
 
 void UWBManager::responder()
 {
-    dwt_rxenable(DWT_START_RX_IMMEDIATE);
-    while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR)))
-        ;
-
-    if (status_reg & SYS_STATUS_RXFCG_BIT_MASK)
+    if (deviceState == DISCOVERY)
     {
-        uint16_t frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
-        dwt_readrxdata(rx_buffer, frame_len, 0);
-        rxMessage.parse(rx_buffer, frame_len);
-        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG_BIT_MASK);
-
-        if (deviceState == DISCOVERY)
+        if (rxMessage.getFunctionCode() == FUNC_CODE_RANGING_CONFIG)
         {
-            if (rxMessage.getFunctionCode() == FUNC_CODE_RANGING_CONFIG)
+            if (rxMessage.getDestinationMac() == myMacAddress)
             {
-                if (rxMessage.getDestinationMac() == myMacAddress)
+                uint8_t initiator_uid, my_assigned_uid, total_devices;
+                if (rxMessage.parseRangingConfig(initiator_uid, my_assigned_uid, total_devices))
                 {
-                    uint8_t initiator_uid, my_assigned_uid, total_devices;
-                    if (rxMessage.parseRangingConfig(initiator_uid, my_assigned_uid, total_devices))
-                    {
-                        setRangingConfiguration(initiator_uid, my_assigned_uid, total_devices);
-                        deviceState = RANGING;
-                        wait_poll = true;
-                        wait_range = false;
-                        counter = 0;
-                        return;
-                    }
-                }
-            }
-            if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
-            {
-                delay(random(0, MAX_RESPONSE_DELAY_MS));
-                uint64_t initiatorMac = rxMessage.getSourceMac();
-                if (initiatorMac != 0)
-                {
-                    txMessage.buildDiscoveryBlink(rxMessage.getSequenceNumber(), initiatorMac, myMacAddress);
-                    dwt_writetxdata(txMessage.getLength() - 2, txMessage.getBuffer(), 0); // FCS_LEN=2
-                    dwt_writetxfctrl(txMessage.getLength(), 0, 0);
-                    dwt_starttx(DWT_START_TX_IMMEDIATE);
-                    while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
-                        ;
-                    dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
+                    setRangingConfiguration(initiator_uid, my_assigned_uid, total_devices);
+                    deviceState = RANGING;
+                    wait_poll = true;
+                    wait_range = false;
+                    counter = 0;
                     return;
                 }
             }
         }
-        else if (deviceState == RANGING)
+        if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
         {
-            if (rxMessage.getFunctionCode() == FUNC_CODE_RESET || rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
+            delay(random(0, MAX_RESPONSE_DELAY_MS));
+            uint64_t initiatorMac = rxMessage.getSourceMac();
+            if (initiatorMac != 0)
             {
-                deviceState = DISCOVERY;
-                wait_poll = true;
-                wait_range = false;
-                counter = 0;
+                txMessage.buildDiscoveryBlink(rxMessage.getSequenceNumber(), initiatorMac, myMacAddress);
+                dwt_writetxdata(txMessage.getLength() - 2, txMessage.getBuffer(), 0); // FCS_LEN=2
+                dwt_writetxfctrl(txMessage.getLength(), 0, 0);
+                dwt_starttx(DWT_START_TX_IMMEDIATE);
+                while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
+                    ;
+                dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
                 return;
-            }
-            if (rxMessage.getSourceUid() != target_uids[counter])
-            {
-                wait_poll = true;
-                wait_range = false;
-                counter = 0;
-                return;
-            }
-            if (wait_poll)
-            {
-                if (counter == 0)
-                {
-                    poll_rx_ts = get_rx_timestamp_u64();
-                }
-                counter++;
-            }
-            else if (wait_range)
-            {
-                if (counter == 0)
-                {
-                    range_rx_ts = get_rx_timestamp_u64();
-                }
-                counter++;
             }
         }
     }
-    else
-    { // Fehler beim Empfang
-        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_TO);
-        wait_poll = true;
-        wait_range = false;
-        counter = 0;
-        return;
+    else if (deviceState == RANGING)
+    {
+        if (rxMessage.getFunctionCode() == FUNC_CODE_RESET || rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
+        {
+            deviceState = DISCOVERY;
+            wait_poll = true;
+            wait_range = false;
+            counter = 0;
+            return;
+        }
+        if (rxMessage.getSourceUid() != target_uids[counter])
+        {
+            wait_poll = true;
+            wait_range = false;
+            counter = 0;
+            return;
+        }
+
+        if (wait_poll)
+        {
+            if (counter == 0)
+            {
+                poll_rx_ts = get_rx_timestamp_u64();
+            }
+            counter++;
+        }
+        else if (wait_range)
+        {
+            if (counter == 0)
+            {
+                range_rx_ts = get_rx_timestamp_u64();
+            }
+            counter++;
+        }
     }
 
     if (deviceState == RANGING)
@@ -569,4 +576,27 @@ int UWBManager::getKnownDevicesCount() const
 uint64_t UWBManager::getMyMacAddress() const
 {
     return myMacAddress;
+}
+
+void UWBManager::responder_loop()
+{
+    if (g_new_message_received)
+    {
+        dwt_readrxdata(rx_buffer, g_received_frame_len, 0);
+        rxMessage.parse(rx_buffer, g_received_frame_len);
+        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG_BIT_MASK);
+        responder();
+        g_new_message_received = false;
+        dwt_rxenable(DWT_START_RX_IMMEDIATE);
+    }
+
+    if (g_rx_error)
+    {
+        g_rx_error = false;
+        wait_poll = true;
+        wait_range = false;
+        counter = 0;
+        dwt_rxenable(DWT_START_RX_IMMEDIATE);
+        return;
+    }
 }

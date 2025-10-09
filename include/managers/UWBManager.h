@@ -39,6 +39,7 @@ public:
     // --- Öffentliche Methoden ---
     void start_uwb();
     void initiator();
+    void responder_loop();
     void responder();
     bool performRangingCycleAndCreatePayload(JsonDocument *jsonData);
     const RangingPartner *getKnownDevices() const;
