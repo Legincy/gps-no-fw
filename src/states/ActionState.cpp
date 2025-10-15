@@ -8,22 +8,7 @@ void ActionState::enter()
 void ActionState::update()
 {
     mqttManager.update();
-    if (configManager.isDeviceTag())
-    {
-        if (uwbManager.performRangingCycleAndCreatePayload(&jsonDoc))
-        {
-            if (millis() - last_ranging_time >= RANGING_INTERVAL_MS)
-            {
-                String payload;
-                serializeJson(jsonDoc, payload);
-                MQTTManager::getInstance().publishMeasurement(payload.c_str());
-
-                last_ranging_time = millis();
-            }
-        }
-    }
-    else
-        uwbManager.responder_loop();
+    uwbManager.loop();
 }
 
 void ActionState::exit()

@@ -14,9 +14,6 @@ private:
     ConfigManager &configManager;
     MQTTManager &mqttManager;
     UWBManager &uwbManager;
-    unsigned long last_ranging_time = 0;
-    static const unsigned long RANGING_INTERVAL_MS = 1000;
-    JsonDocument jsonDoc;
 
 public:
     ActionState(const ActionState &) = delete;

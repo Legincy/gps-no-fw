@@ -6,7 +6,9 @@
 #include "dw3000.h"
 #include "Frame_802_15_4.h"
 #include "ArduinoJson.h"
-
+#include "ConfigManager.h"
+#include "LogManager.h"
+#include "MQTTManager.h"
 // Function code
 static const uint8_t FUNC_CODE_POLL = 0xE2, FUNC_CODE_ACK = 0xE3, FUNC_CODE_RANGE = 0xE4,
                      FUNC_CODE_FINAL = 0xE5, FUNC_CODE_RESET = 0xE6,
@@ -39,14 +41,21 @@ public:
     // --- Öffentliche Methoden ---
     void start_uwb();
     void initiator();
-    void responder_loop();
     void responder();
-    bool performRangingCycleAndCreatePayload(JsonDocument *jsonData);
+    void responder_loop();
+    bool initiator_loop();
     const RangingPartner *getKnownDevices() const;
+    void loop();
 
 private:
     UWBManager(); // Privater Konstruktor
-
+    // Hilf-Managers
+    RuntimeConfig &runtimeconfig;
+    LogManager &logManager;
+    MQTTManager &mqttManager;
+    unsigned long last_distance_publish = 0;
+    // JSON Dokument für MQTT Nachrichten
+    JsonDocument jsonDoc;
     // --- Private Konstanten ---
     static const int INTERVAL = 5;
     static const int UWB_RST = 27, UWB_IRQ = 34, UWB_SS = 4;
@@ -54,7 +63,7 @@ private:
     static const uint16_t TX_ANT_DLY = 16385, RX_ANT_DLY = 16385;
     static const int TX_TO_RX_DLY_UUS = 100, RX_TO_TX_DLY_UUS = 800, RX_TIMEOUT_UUS = 400000;
     static const int BUF_LEN = 127;
-    static const int DISCOVERY_WINDOW_MS = 200;
+    static const int DISCOVERY_WINDOW_MS = 1000;
     static const int MAX_RESPONSE_DELAY_MS = 50;
 
     // --- Private Member-Variablen ---
@@ -64,7 +73,8 @@ private:
     DeviceState deviceState;
     uint64_t myMacAddress;
     bool m_rangingCycleCompleted;
-
+    bool configInitatorMode = false;
+    bool configResponderMode = false;
     // Messages & Buffers
     Frame_802_15_4 txMessage, rxMessage;
     uint8_t rx_buffer[BUF_LEN];
@@ -108,6 +118,8 @@ private:
     void updateDistance(uint8_t uid, double new_distance);
     void set_target_uids();
     void print_frame_data(const uint8_t *data, uint16_t length);
+    void configInitator();
+    void configResponder();
 };
 
 #endif

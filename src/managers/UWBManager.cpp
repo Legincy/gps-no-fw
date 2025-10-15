@@ -1,7 +1,6 @@
 #include "Frame_802_15_4.h"
 #include "managers/UWBManager.h"
-#include "managers/ConfigManager.h"
-#include <Arduino.h>
+
 #include <algorithm>
 #include <vector>
 
@@ -58,7 +57,8 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
                            known_devices_count(0), poll_tx_ts(0), poll_rx_ts(0), range_tx_ts(0),
                            ack_tx_ts(0), range_rx_ts(0), t_reply_2(0), tof(0.0), distance(0.0),
                            previous_debug_millis(0), current_debug_millis(0), tx_time(0), tx_ts(0),
-                           m_rangingCycleCompleted(false)
+                           m_rangingCycleCompleted(false), runtimeconfig(ConfigManager::getInstance().getRuntimeConfig()),
+                           logManager(LogManager::getInstance()), mqttManager(MQTTManager::getInstance())
 {
     memset(target_uids, 0, sizeof(target_uids));
     memset(discovered_macs, 0, sizeof(discovered_macs));
@@ -70,8 +70,6 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
 
 void UWBManager::start_uwb()
 {
-    ConfigManager &configManager = ConfigManager::getInstance();
-    const RuntimeConfig &runtimeconfig = configManager.getRuntimeConfig();
     const char *modifiedMacStr = runtimeconfig.device.modifiedMac;
     myMacAddress = strtoull(modifiedMacStr, NULL, 16);
 
@@ -80,7 +78,7 @@ void UWBManager::start_uwb()
     delay(200);
     while (!dwt_checkidlerc())
     {
-        Serial.println("IDLE FAILED");
+        logManager.error("UWBManager", "IDLE failed");
         while (1)
             ;
     }
@@ -88,33 +86,53 @@ void UWBManager::start_uwb()
     delay(200);
     if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR)
     {
-        Serial.println("INIT FAILED");
+        logManager.error("UWBManager", "INIT failed");
         while (1)
             ;
     }
     dwt_setleds(DWT_LEDS_DISABLE);
     if (dwt_configure(&config))
     {
-        Serial.println("CONFIG FAILED");
+        logManager.error("UWBManager", "CONFIG failed");
         while (1)
             ;
     }
-
-    pinMode(UWB_IRQ, INPUT_PULLUP);
-    dwt_setcallbacks(NULL, rx_ok_cb, rx_err_cb, rx_err_cb, NULL, NULL);
-    dwt_setinterrupt(SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK | SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK, 0x0, DWT_ENABLE_INT_ONLY);
-    attachInterrupt(digitalPinToInterrupt(UWB_IRQ), dwt_isr, RISING);
-    dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
 
     dwt_configuretxrf(&txconfig_options);
     dwt_setrxantennadelay(RX_ANT_DLY);
     dwt_settxantennadelay(TX_ANT_DLY);
     dwt_setrxaftertxdelay(TX_TO_RX_DLY_UUS);
-    dwt_setrxtimeout(0); // TODO
-    // dwt_setrxtimeout(RX_TIMEOUT_UUS);
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
-    //
+}
+
+void UWBManager::configInitator()
+{
+    detachInterrupt(digitalPinToInterrupt(UWB_IRQ));
+    dwt_forcetrxoff();
+    dwt_setcallbacks(NULL, NULL, NULL, NULL, NULL, NULL);
+    dwt_setinterrupt(0, 0, DWT_DISABLE_INT);
+    dwt_write32bitreg(SYS_STATUS_ID,
+                      SYS_STATUS_ALL_RX_ERR |
+                          SYS_STATUS_ALL_RX_TO |
+                          SYS_STATUS_TXFRS_BIT_MASK |
+                          SYS_STATUS_RCINIT_BIT_MASK |
+                          SYS_STATUS_SPIRDY_BIT_MASK);
+    dwt_setrxtimeout(RX_TIMEOUT_UUS);
+    configInitatorMode = true;
+    configResponderMode = false;
+}
+
+void UWBManager::configResponder()
+{
+    pinMode(UWB_IRQ, INPUT_PULLUP);
+    dwt_setcallbacks(NULL, rx_ok_cb, rx_err_cb, rx_err_cb, NULL, NULL);
+    dwt_setinterrupt(SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK | SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK, 0x0, DWT_ENABLE_INT_ONLY);
+    attachInterrupt(digitalPinToInterrupt(UWB_IRQ), dwt_isr, RISING);
+    dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
+    dwt_setrxtimeout(0);
     dwt_rxenable(DWT_START_RX_IMMEDIATE);
+    configInitatorMode = false;
+    configResponderMode = true;
 }
 
 void UWBManager::setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices)
@@ -123,12 +141,11 @@ void UWBManager::setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssigne
     INITIATOR_UID = initiatorUid;
     NUM_NODES = totalDevices;
     WAIT_NUM = (UID > INITIATOR_UID) ? (UID - INITIATOR_UID) / 4 : 0;
-    set_target_uids(); // Private Hilfsfunktion aufrufen
+    set_target_uids();
 }
 
 void UWBManager::initiator()
 {
-    dwt_setrxtimeout(RX_TIMEOUT_UUS);
     if (deviceState == DISCOVERY)
     {
         if (INITIATOR_UID == 0)
@@ -308,12 +325,12 @@ void UWBManager::initiator()
                 Serial.print(" m\t");
             }
             Serial.println();
+            m_rangingCycleCompleted = true;
             previous_debug_millis = current_debug_millis;
             counter = 0;
             wait_ack = false;
             wait_final = false;
             frame_seq_nb++;
-            m_rangingCycleCompleted = true;
             delay(INTERVAL);
         }
     }
@@ -497,48 +514,6 @@ void UWBManager::set_target_uids()
         }
     }
 }
-bool UWBManager::performRangingCycleAndCreatePayload(JsonDocument *jsonData)
-{
-    this->m_rangingCycleCompleted = false;
-    this->initiator();
-
-    if (this->m_rangingCycleCompleted)
-    {
-        std::vector<RangingPartner> sorted_devices;
-        for (int i = 0; i < this->known_devices_count; ++i)
-        {
-            sorted_devices.push_back(this->known_devices[i]);
-        }
-        std::sort(sorted_devices.begin(), sorted_devices.end(),
-                  [](const RangingPartner &a, const RangingPartner &b)
-                  {
-                      return a.mac_address < b.mac_address;
-                  });
-
-        jsonData->clear();
-        char sourceMacStr[18];
-        mac_uint64_to_str(this->myMacAddress, sourceMacStr);
-        (*jsonData)["source"] = sourceMacStr;
-        JsonArray data = (*jsonData)["data"].to<JsonArray>();
-
-        for (const auto &device : sorted_devices)
-        {
-            if (device.distance > 0)
-            {
-                JsonObject result = data.add<JsonObject>();
-                char targetMacStr[18];
-                mac_uint64_to_str(device.mac_address, targetMacStr);
-                result["value"] = device.distance;
-                result["type"] = "UWB";
-                result["unit"] = "METER";
-                result["target"] = targetMacStr;
-            }
-        }
-        return true;
-    }
-
-    return false;
-}
 void UWBManager::print_frame_data(const uint8_t *data, uint16_t length)
 {
     Serial.print("DEBUG RX (len=");
@@ -598,5 +573,76 @@ void UWBManager::responder_loop()
         counter = 0;
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
         return;
+    }
+}
+
+bool UWBManager::initiator_loop()
+{
+    if (millis() - last_distance_publish > runtimeconfig.device.distancesUpdateInterval)
+    {
+        m_rangingCycleCompleted = false;
+        initiator();
+        JsonDocument *jsonData = &jsonDoc;
+        if (m_rangingCycleCompleted)
+        {
+            std::vector<RangingPartner> sorted_devices;
+            for (int i = 0; i < this->known_devices_count; ++i)
+            {
+                sorted_devices.push_back(this->known_devices[i]);
+            }
+            std::sort(sorted_devices.begin(), sorted_devices.end(),
+                      [](const RangingPartner &a, const RangingPartner &b)
+                      {
+                          return a.mac_address < b.mac_address;
+                      });
+
+            jsonData->clear();
+            char sourceMacStr[18];
+            mac_uint64_to_str(this->myMacAddress, sourceMacStr);
+            (*jsonData)["source"] = sourceMacStr;
+            JsonArray data = (*jsonData)["data"].to<JsonArray>();
+
+            for (const auto &device : sorted_devices)
+            {
+                if (device.distance > 0)
+                {
+                    JsonObject result = data.add<JsonObject>();
+                    char targetMacStr[18];
+                    mac_uint64_to_str(device.mac_address, targetMacStr);
+                    result["value"] = device.distance;
+                    result["type"] = "UWB";
+                    result["unit"] = "METER";
+                    result["target"] = targetMacStr;
+                }
+            }
+            String payload;
+            serializeJson(jsonDoc, payload);
+            mqttManager.publishMeasurement(payload.c_str());
+            jsonData->clear();
+            last_distance_publish = millis();
+            return true;
+        }
+    }
+    return false;
+}
+
+void UWBManager::loop()
+{
+    if (!runtimeconfig.device.isTag)
+    {
+        if (!configResponderMode)
+        {
+            configResponder();
+        }
+        responder_loop();
+    }
+    else
+    {
+        // Initator
+        if (!configInitatorMode)
+        {
+            configInitator();
+        }
+        initiator_loop();
     }
 }
