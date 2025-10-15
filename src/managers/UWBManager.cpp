@@ -310,8 +310,8 @@ void UWBManager::initiator()
         if (wait_final && (counter == NUM_NODES - 1))
         {
             current_debug_millis = millis();
-            Serial.print(current_debug_millis - previous_debug_millis);
-            Serial.print("ms\t");
+            // Serial.print(current_debug_millis - previous_debug_millis);
+            // Serial.print("ms\t");
             for (int i = 0; i < counter; i++)
             {
                 t_reply_2 = get_tx_timestamp_u64() - (t_round_1[i] + poll_tx_ts);
@@ -319,12 +319,12 @@ void UWBManager::initiator()
                       ((double)t_round_1[i] + t_round_2[i] + t_reply_1[i] + t_reply_2);
                 distance = tof * DWT_TIME_UNITS * SPEED_OF_LIGHT;
                 updateDistance(target_uids[i], distance);
-                Serial.print(target_uids[i]);
-                Serial.print("\t");
-                Serial.print(distance);
-                Serial.print(" m\t");
+                // Serial.print(target_uids[i]);
+                // Serial.print("\t");
+                // Serial.print(distance);
+                // Serial.print(" m\t");
             }
-            Serial.println();
+            // Serial.println();
             m_rangingCycleCompleted = true;
             previous_debug_millis = current_debug_millis;
             counter = 0;
