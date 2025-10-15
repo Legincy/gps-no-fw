@@ -582,9 +582,9 @@ bool UWBManager::initiator_loop()
     {
         m_rangingCycleCompleted = false;
         initiator();
-        JsonDocument *jsonData = &jsonDoc;
         if (m_rangingCycleCompleted)
         {
+            JsonDocument *jsonData = &jsonDoc;
             std::vector<RangingPartner> sorted_devices;
             for (int i = 0; i < this->known_devices_count; ++i)
             {
@@ -618,7 +618,6 @@ bool UWBManager::initiator_loop()
             String payload;
             serializeJson(jsonDoc, payload);
             mqttManager.publishMeasurement(payload.c_str());
-            jsonData->clear();
             last_distance_publish = millis();
             return true;
         }
@@ -626,6 +625,41 @@ bool UWBManager::initiator_loop()
     return false;
 }
 
+bool UWBManager::enableInitator()
+{
+    JsonDocument *jsonData = &jsonDoc;
+    jsonData->clear();
+    (*jsonData)["source"] = "SYNC";
+    JsonObject data = (*jsonData).createNestedObject("data");
+    char sourceMacStr[18];
+    mac_uint64_to_str(this->myMacAddress, sourceMacStr);
+    data["mac_address"] = sourceMacStr;
+    JsonObject config = data.createNestedObject("config");
+    JsonObject uwb = config.createNestedObject("uwb");
+    uwb["mode"] = "TAG";
+    ConfigManager::getInstance().setDeviceIsTag(true);
+    String payload;
+    serializeJson(jsonDoc, payload);
+    return mqttManager.publishConfig(payload.c_str());
+}
+
+bool UWBManager::disableInitator()
+{
+    JsonDocument *jsonData = &jsonDoc;
+    jsonData->clear();
+    (*jsonData)["source"] = "SYNC";
+    JsonObject data = (*jsonData).createNestedObject("data");
+    char sourceMacStr[18];
+    mac_uint64_to_str(this->myMacAddress, sourceMacStr);
+    data["mac_address"] = sourceMacStr;
+    JsonObject config = data.createNestedObject("config");
+    JsonObject uwb = config.createNestedObject("uwb");
+    uwb["mode"] = "ANCHOR";
+    ConfigManager::getInstance().setDeviceIsTag(true);
+    String payload;
+    serializeJson(jsonDoc, payload);
+    return mqttManager.publishConfig(payload.c_str());
+}
 void UWBManager::loop()
 {
     if (!runtimeconfig.device.isTag)

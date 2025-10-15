@@ -9,7 +9,7 @@ static TaskHandle_t xUWBCmdHandle;
 class UWBCommand : public IExtendedCommand
 {
 private:
-    // UWBManager &uwbManager;
+    UWBManager &uwbManager;
     ConfigManager &configManager;
 
     bool startUWBCmd(const std::vector<String> &args, ICommandContext &context);
@@ -18,7 +18,7 @@ private:
 
 public:
     UWBCommand()
-        : // uwbManager(UWBManager::getInstance()),
+        : uwbManager(UWBManager::getInstance()),
           configManager(ConfigManager::getInstance())
     {
         xUWBCmdHandle = nullptr;
@@ -48,7 +48,7 @@ public:
 
     const char *getDescription() const override
     {
-        return "Configure and manage Ultra Wideband";
+        return "Start or stop the UWB-Initator mode";
     }
 };
 

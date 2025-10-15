@@ -46,6 +46,8 @@ public:
     bool initiator_loop();
     const RangingPartner *getKnownDevices() const;
     void loop();
+    bool enableInitator();
+    bool disableInitator();
 
 private:
     UWBManager(); // Privater Konstruktor

@@ -282,3 +282,12 @@ bool MQTTManager::publishMeasurement(const char *payload)
 
     return publish(fullTopic, payload, false, true);
 }
+
+bool MQTTManager::publishConfig(const char *payload)
+{
+    const char *macAddress = configManager.getRuntimeConfig().device.modifiedMac;
+    char fullTopic[128];
+    snprintf(fullTopic, sizeof(fullTopic), "%s/stations/%s", MQTT_BASE_TOPIC, macAddress);
+
+    return publish(fullTopic, payload, true, true);
+}

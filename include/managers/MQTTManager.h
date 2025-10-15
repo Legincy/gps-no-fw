@@ -69,10 +69,10 @@ public:
     bool unsubscribe(const char *topic);
     bool publish(const char *topic, const char *payload, bool isRetained = false, bool isAbsoluteTopic = false);
     bool publishMeasurement(const char *payload);
+    bool publishConfig(const char *payload);
     void update();
     bool isConnected();
     bool isSubscribed(const char *topic);
-
     PubSubClient &getClient() { return client; }
     const char *getClientId() { return clientId; }
     const char *getStationTopic() { return stationTopic; }
