@@ -3,7 +3,7 @@
  *
  * Created: 9/10/2021 12:32:28 PM
  *  Author: Emin Eminof
- */ 
+ */
 
 #ifndef UART_H_
 #define UART_H_
@@ -12,8 +12,8 @@
 
 void UART_init(void);
 void UART_putc(char data);
-void UART_puts(char* s);
+void UART_puts(const char *s);
 
-void test_run_info(unsigned char * s);
+void test_run_info(unsigned char *s);
 
 #endif /* UART_H_ */
