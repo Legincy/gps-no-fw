@@ -630,7 +630,7 @@ bool UWBManager::enableInitiator()
 {
     JsonDocument *jsonData = &jsonDoc;
     jsonData->clear();
-    (*jsonData)["source"] = "SYNC";
+    (*jsonData)["source"] = "DEVICE";
     JsonObject data = (*jsonData)["data"].to<JsonObject>();
     char sourceMacStr[18];
     mac_uint64_to_str(this->myMacAddress, sourceMacStr);
@@ -648,7 +648,7 @@ bool UWBManager::disableInitiator()
 {
     JsonDocument *jsonData = &jsonDoc;
     jsonData->clear();
-    (*jsonData)["source"] = "SYNC";
+    (*jsonData)["source"] = "DEVICE";
     JsonObject data = (*jsonData)["data"].to<JsonObject>();
     char sourceMacStr[18];
     mac_uint64_to_str(this->myMacAddress, sourceMacStr);
