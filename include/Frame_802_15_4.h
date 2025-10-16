@@ -13,6 +13,7 @@
 #define RESP_MSG_TS_LEN 4
 
 #define MAX_UWB_MESSAGE_LEN 127
+static void mac_uint64_to_str(uint64_t mac, char *str);
 
 class Frame_802_15_4
 {

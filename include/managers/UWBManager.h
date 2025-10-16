@@ -113,11 +113,7 @@ private:
     unsigned long previous_debug_millis, current_debug_millis;
 
     // --- Private Hilfsfunktionen ---
-    int getKnownDevicesCount() const;
-    uint64_t getMyMacAddress() const;
     void setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices);
-    bool isRangingCycleComplete() const;
-    void resetRangingCycleStatus();
     void updateKnownDevices(uint64_t mac, uint8_t uid);
     void updateDistance(uint8_t uid, double new_distance);
     void set_target_uids();

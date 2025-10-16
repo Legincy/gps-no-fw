@@ -8,13 +8,6 @@ volatile bool g_new_message_received = false;
 volatile bool g_rx_error = false;
 volatile uint16_t g_received_frame_len = 0;
 
-static void mac_uint64_to_str(uint64_t mac, char *str)
-{
-    sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
-            (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),
-            (uint8_t)(mac >> 16), (uint8_t)(mac >> 8), (uint8_t)(mac));
-}
-
 static void rx_ok_cb(const dwt_cb_data_t *cb_data)
 {
     g_received_frame_len = cb_data->datalength;
@@ -522,30 +515,6 @@ void UWBManager::print_frame_data(const uint8_t *data, uint16_t length)
         Serial.print(" ");
     }
     Serial.println();
-}
-bool UWBManager::isRangingCycleComplete() const
-{
-    return m_rangingCycleCompleted;
-}
-
-void UWBManager::resetRangingCycleStatus()
-{
-    m_rangingCycleCompleted = false;
-}
-
-const UWBManager::RangingPartner *UWBManager::getKnownDevices() const
-{
-    return known_devices;
-}
-
-int UWBManager::getKnownDevicesCount() const
-{
-    return known_devices_count;
-}
-
-uint64_t UWBManager::getMyMacAddress() const
-{
-    return myMacAddress;
 }
 
 void UWBManager::responder_loop()

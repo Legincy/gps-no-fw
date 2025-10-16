@@ -1,6 +1,13 @@
 #include "Frame_802_15_4.h"
 #include "managers/UWBManager.h"
 
+static void mac_uint64_to_str(uint64_t mac, char *str)
+{
+    sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),
+            (uint8_t)(mac >> 16), (uint8_t)(mac >> 8), (uint8_t)(mac));
+}
+
 static void uint64_to_bytes_le(uint8_t *dest, uint64_t value, int len)
 {
     for (int i = 0; i < len; ++i)
