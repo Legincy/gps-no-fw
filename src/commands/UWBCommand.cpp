@@ -2,7 +2,7 @@
 
 bool UWBCommand::startUWBCmd(const std::vector<String> &args, ICommandContext &context)
 {
-    if (uwbManager.enableInitator())
+    if (uwbManager.enableInitiator())
     {
         context.sendResponse("UWB-Initator mode started.\n");
         return true;
@@ -16,7 +16,7 @@ bool UWBCommand::startUWBCmd(const std::vector<String> &args, ICommandContext &c
 
 bool UWBCommand::stopUWBCmd(const std::vector<String> &args, ICommandContext &context)
 {
-    if (uwbManager.disableInitator())
+    if (uwbManager.disableInitiator())
     {
         context.sendResponse("UWB-Initator mode stopped.\n");
         return true;

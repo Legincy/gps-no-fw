@@ -46,8 +46,8 @@ public:
     bool initiator_loop();
     const RangingPartner *getKnownDevices() const;
     void loop();
-    bool enableInitator();
-    bool disableInitator();
+    bool enableInitiator();
+    bool disableInitiator();
 
 private:
     UWBManager(); // Privater Konstruktor
@@ -65,8 +65,8 @@ private:
     static const uint16_t TX_ANT_DLY = 16385, RX_ANT_DLY = 16385;
     static const int TX_TO_RX_DLY_UUS = 100, RX_TO_TX_DLY_UUS = 800, RX_TIMEOUT_UUS = 400000;
     static const int BUF_LEN = 127;
-    static const int DISCOVERY_WINDOW_MS = 1000;
-    static const int MAX_RESPONSE_DELAY_MS = 50;
+    static const int DISCOVERY_WINDOW_MS = 500;
+    static const int MAX_RESPONSE_DELAY_MS = 20;
 
     // --- Private Member-Variablen ---
     // Ranging & Device Config
@@ -120,7 +120,7 @@ private:
     void updateDistance(uint8_t uid, double new_distance);
     void set_target_uids();
     void print_frame_data(const uint8_t *data, uint16_t length);
-    void configInitator();
+    void configInitiator();
     void configResponder();
 };
 

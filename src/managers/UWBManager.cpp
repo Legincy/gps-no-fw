@@ -105,7 +105,7 @@ void UWBManager::start_uwb()
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
 }
 
-void UWBManager::configInitator()
+void UWBManager::configInitiator()
 {
     detachInterrupt(digitalPinToInterrupt(UWB_IRQ));
     dwt_forcetrxoff();
@@ -331,7 +331,8 @@ void UWBManager::initiator()
             wait_ack = false;
             wait_final = false;
             frame_seq_nb++;
-            delay(INTERVAL);
+            // delay(INTERVAL);
+            delay(1);
         }
     }
 }
@@ -340,6 +341,22 @@ void UWBManager::responder()
 {
     if (deviceState == DISCOVERY)
     {
+        if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
+        {
+            delay(random(5, MAX_RESPONSE_DELAY_MS));
+            uint64_t initiatorMac = rxMessage.getSourceMac();
+            if (initiatorMac != 0)
+            {
+                txMessage.buildDiscoveryBlink(rxMessage.getSequenceNumber(), initiatorMac, myMacAddress);
+                dwt_writetxdata(txMessage.getLength() - 2, txMessage.getBuffer(), 0); // FCS_LEN=2
+                dwt_writetxfctrl(txMessage.getLength(), 0, 0);
+                dwt_starttx(DWT_START_TX_IMMEDIATE);
+                while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
+                    ;
+                dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
+                return;
+            }
+        }
         if (rxMessage.getFunctionCode() == FUNC_CODE_RANGING_CONFIG)
         {
             if (rxMessage.getDestinationMac() == myMacAddress)
@@ -354,22 +371,6 @@ void UWBManager::responder()
                     counter = 0;
                     return;
                 }
-            }
-        }
-        if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
-        {
-            delay(random(0, MAX_RESPONSE_DELAY_MS));
-            uint64_t initiatorMac = rxMessage.getSourceMac();
-            if (initiatorMac != 0)
-            {
-                txMessage.buildDiscoveryBlink(rxMessage.getSequenceNumber(), initiatorMac, myMacAddress);
-                dwt_writetxdata(txMessage.getLength() - 2, txMessage.getBuffer(), 0); // FCS_LEN=2
-                dwt_writetxfctrl(txMessage.getLength(), 0, 0);
-                dwt_starttx(DWT_START_TX_IMMEDIATE);
-                while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
-                    ;
-                dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
-                return;
             }
         }
     }
@@ -625,7 +626,7 @@ bool UWBManager::initiator_loop()
     return false;
 }
 
-bool UWBManager::enableInitator()
+bool UWBManager::enableInitiator()
 {
     JsonDocument *jsonData = &jsonDoc;
     jsonData->clear();
@@ -643,7 +644,7 @@ bool UWBManager::enableInitator()
     return mqttManager.publishConfig(payload.c_str());
 }
 
-bool UWBManager::disableInitator()
+bool UWBManager::disableInitiator()
 {
     JsonDocument *jsonData = &jsonDoc;
     jsonData->clear();
@@ -675,7 +676,7 @@ void UWBManager::loop()
         // Initator
         if (!configInitatorMode)
         {
-            configInitator();
+            configInitiator();
         }
         initiator_loop();
     }

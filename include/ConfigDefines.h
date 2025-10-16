@@ -5,8 +5,8 @@
 #define DEVICE_HEARTBEAT_INTERVAL 60000
 #define DEVICE_DISTANCES_UPDATE_INTERVAL 1000
 
-#define WIFI_SSID ""     // Todo: Delete
-#define WIFI_PASSWORD "" // Todo: Delete
+#define WIFI_SSID "Wohnzimmer"       // Todo: Delete
+#define WIFI_PASSWORD "Sibellam1723" // Todo: Delete
 #define WIFI_AUTO_RECONNECT true
 #define WIFI_CHECK_INTERVAL 500
 #define WIFI_RECONNECT_INTERVAL 5000
@@ -17,7 +17,7 @@
 #define MQTT_BROKER "mq.mini4.de" // Todo: Delete
 #define MQTT_PORT 1883
 #define MQTT_USER "gpsno"
-#define MQTT_PASSWORD "" // Todo: Delete
+#define MQTT_PASSWORD "S%&n@b5LHnog4tV5" // Todo: Delete
 #define MQTT_RETRY_INTERVAL 5000
 #define MQTT_MAX_CONNECTION_ATTEMPTS 20
 #define MQTT_BASE_TOPIC "gpsno/v2"
