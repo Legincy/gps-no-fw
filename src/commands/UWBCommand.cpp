@@ -1,45 +1,60 @@
 #include "commands/UWBCommand.h"
 
-bool UWBCommand::startUWBCmd(const std::vector<String> &args, ICommandContext &context)
+bool UWBCommand::startRangeUWBCmd(const std::vector<String> &args, ICommandContext &context)
 {
     if (configManager.isDeviceTag())
     {
-        context.sendResponse("Device is already configured as Initator.\n");
+        context.sendResponse("Ranging mode ist already started.\n");
         return false;
     }
     else
     {
         if (uwbManager.enableInitiator())
         {
-            context.sendResponse("UWB-Initator mode started.\n");
+            context.sendResponse("Ringing mode started.\n");
             return true;
         }
         else
         {
-            context.sendResponse("Failed to start UWB-Initator mode.\n");
+            context.sendResponse("Failed to start Ranging mode.\n");
             return false;
         }
     }
 }
 
-bool UWBCommand::stopUWBCmd(const std::vector<String> &args, ICommandContext &context)
+bool UWBCommand::stopRangeUWBCmd(const std::vector<String> &args, ICommandContext &context)
 {
     if (configManager.isDeviceTag())
     {
         if (uwbManager.disableInitiator())
         {
-            context.sendResponse("UWB-Initator mode stopped.\n");
+            context.sendResponse("Ranging mode stopped.\n");
             return true;
         }
         else
         {
-            context.sendResponse("Failed to stop UWB-Initator mode.\n");
+            context.sendResponse("Failed to stop ranging mode.\n");
             return false;
         }
     }
     else
     {
-        context.sendResponse("Device is not configured as Initator.\n");
+        context.sendResponse("Ranging is already stopped.\n");
         return false;
     }
+}
+bool UWBCommand::resetUWBCmd(const std::vector<String> &args, ICommandContext &context)
+{
+    uwbManager.resetUWB();
+    context.sendResponse("UWB Module restarted.\n");
+    return true;
+}
+bool UWBCommand::printUWBInformationCmd(const std::vector<String> &args, ICommandContext &context)
+{
+    uwbManager.printRangingInfo();
+    return true;
+}
+bool UWBCommand::configureUWBCmd(const std::vector<String> &args, ICommandContext &context)
+{
+    return false;
 }

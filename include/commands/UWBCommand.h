@@ -12,8 +12,11 @@ private:
     UWBManager &uwbManager;
     ConfigManager &configManager;
 
-    bool startUWBCmd(const std::vector<String> &args, ICommandContext &context);
-    bool stopUWBCmd(const std::vector<String> &args, ICommandContext &context);
+    bool startRangeUWBCmd(const std::vector<String> &args, ICommandContext &context);
+    bool stopRangeUWBCmd(const std::vector<String> &args, ICommandContext &context);
+    bool resetUWBCmd(const std::vector<String> &args, ICommandContext &context);
+    bool printUWBInformationCmd(const std::vector<String> &args, ICommandContext &context);
+    bool configureUWBCmd(const std::vector<String> &args, ICommandContext &context);
     TaskHandle_t uwbTaskHandle = NULL;
 
 public:
@@ -22,23 +25,38 @@ public:
           configManager(ConfigManager::getInstance())
     {
         xUWBCmdHandle = nullptr;
+        // start UWB subcommands
         subCommands["start"] = [this](const std::vector<String> &args, ICommandContext &context)
         {
-            return startUWBCmd(args, context);
+            return startRangeUWBCmd(args, context);
         };
-        subCommandDescriptions["start"] = "Starts the Ultra Wideband module";
+        subCommandDescriptions["start"] = "Start ranging as Ultra Wideband Initator (TAG)";
         subCommandParameters["start"] = {
-            // Todo
-        };
-
+            {"min_anchors", "Start ranging with mininum anchors", false, ""}};
+        // stop UWB subcommands
         subCommands["stop"] = [this](const std::vector<String> &args, ICommandContext &context)
         {
-            return stopUWBCmd(args, context);
+            return stopRangeUWBCmd(args, context);
         };
-        subCommandDescriptions["stop"] = "Stops the Ultra Wideband module";
-        subCommandParameters["stop"] = {
-            // Todo
+        subCommandDescriptions["stop"] = "Stop ranging as Ultra Wideband Initator (TAG)";
+        // reset UWB subcommands
+        subCommands["reset"] = [this](const std::vector<String> &args, ICommandContext &context)
+        {
+            return resetUWBCmd(args, context);
         };
+        subCommandDescriptions["reset"] = "Reset UWB module.";
+        // info UWB subcommands
+        subCommands["infos"] = [this](const std::vector<String> &args, ICommandContext &context)
+        {
+            return printUWBInformationCmd(args, context);
+        };
+        subCommandDescriptions["infos"] = "Show UWB-information.";
+        // config UWB subcommands
+        subCommands["config"] = [this](const std::vector<String> &args, ICommandContext &context)
+        {
+            return configureUWBCmd(args, context);
+        };
+        subCommandDescriptions["config"] = "Configure UWB Module.";
     }
 
     const char *getName() const override
@@ -48,7 +66,7 @@ public:
 
     const char *getDescription() const override
     {
-        return "Start or stop the UWB-Initator mode";
+        return "Configure and manage Ultra Wideband (UWB) module";
     }
 };
 

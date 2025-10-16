@@ -48,6 +48,9 @@ public:
     void loop();
     bool enableInitiator();
     bool disableInitiator();
+    void resetUWB();
+    void printRangingInfo();
+    void printUWBConfig();
 
 private:
     UWBManager(); // Privater Konstruktor

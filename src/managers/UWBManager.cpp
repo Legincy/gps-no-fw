@@ -545,7 +545,6 @@ bool UWBManager::initiator_loop()
 {
     if (millis() - last_distance_publish > runtimeconfig.device.distancesUpdateInterval)
     {
-        m_rangingCycleCompleted = false;
         initiator();
         if (m_rangingCycleCompleted)
         {
@@ -584,6 +583,7 @@ bool UWBManager::initiator_loop()
             serializeJson(jsonDoc, payload);
             mqttManager.publishMeasurement(payload.c_str());
             last_distance_publish = millis();
+            m_rangingCycleCompleted = false;
             return true;
         }
     }
@@ -644,4 +644,60 @@ void UWBManager::loop()
         }
         initiator_loop();
     }
+}
+
+void UWBManager::printRangingInfo()
+{
+    if (!runtimeconfig.device.isTag)
+    {
+        Serial.print("Device is ANCHOR");
+    }
+    else
+    {
+        Serial.print("Device is TAG");
+    }
+    Serial.print(" with UID ");
+    Serial.println(UID);
+    Serial.print("Initiator UID: ");
+    Serial.println(INITIATOR_UID);
+    Serial.print("Number of Nodes: ");
+    Serial.println(NUM_NODES);
+    Serial.print("Device State: ");
+    if (deviceState == DISCOVERY)
+    {
+        Serial.println("DISCOVERY");
+    }
+    else if (deviceState == RANGING)
+    {
+        Serial.println("RANGING");
+    }
+    else
+    {
+        Serial.println("UNKNOWN");
+    }
+}
+
+void UWBManager::resetUWB()
+{
+    if (runtimeconfig.device.isTag)
+    {
+        configResponder();
+    }
+    else
+    {
+        configInitiator();
+    }
+    deviceState = DISCOVERY;
+    wait_poll = true;
+    wait_ack = false;
+    wait_range = false;
+    wait_final = false;
+    counter = 0;
+    discovered_count = 0;
+    known_devices_count = 0;
+    frame_seq_nb = 0;
+}
+
+void UWBManager::printUWBConfig()
+{
 }

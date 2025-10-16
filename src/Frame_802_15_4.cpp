@@ -1,7 +1,7 @@
 #include "Frame_802_15_4.h"
 #include "managers/UWBManager.h"
 
-static void mac_uint64_to_str(uint64_t mac, char *str)
+void mac_uint64_to_str(uint64_t mac, char *str)
 {
     sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
             (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),

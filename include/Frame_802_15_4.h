@@ -11,15 +11,14 @@
 #define MSG_FUNC_IDX 9
 #define MSG_T_REPLY_IDX 10
 #define RESP_MSG_TS_LEN 4
-
 #define MAX_UWB_MESSAGE_LEN 127
-static void mac_uint64_to_str(uint64_t mac, char *str);
+
+void mac_uint64_to_str(uint64_t mac, char *str);
 
 class Frame_802_15_4
 {
 public:
     static const uint16_t RANGING_MSG_LEN = 16;
-
     Frame_802_15_4();
 
     // ---- Builder-Methoden ----
