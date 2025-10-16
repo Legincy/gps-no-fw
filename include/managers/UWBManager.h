@@ -79,6 +79,7 @@ private:
     bool configResponderMode = false;
     // Messages & Buffers
     Frame_802_15_4 txMessage, rxMessage;
+    uint8_t func_code;
     uint8_t rx_buffer[BUF_LEN];
     uint8_t frame_seq_nb;
 
@@ -103,6 +104,7 @@ private:
     uint32_t t_round_2[MAX_NODES - 1];
     uint32_t tx_time;
     uint64_t tx_ts;
+    unsigned long last_discovery_millis;
 
     // Calculated values
     double tof, distance;

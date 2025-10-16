@@ -55,7 +55,7 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
                            status_reg(0), wait_poll(true), wait_ack(false), wait_range(false),
                            wait_final(false), counter(0), ret(0), discovered_count(0),
                            known_devices_count(0), poll_tx_ts(0), poll_rx_ts(0), range_tx_ts(0),
-                           ack_tx_ts(0), range_rx_ts(0), t_reply_2(0), tof(0.0), distance(0.0),
+                           ack_tx_ts(0), range_rx_ts(0), t_reply_2(0), tof(0.0), distance(0.0), last_discovery_millis(0),
                            previous_debug_millis(0), current_debug_millis(0), tx_time(0), tx_ts(0),
                            m_rangingCycleCompleted(false), runtimeconfig(ConfigManager::getInstance().getRuntimeConfig()),
                            logManager(LogManager::getInstance()), mqttManager(MQTTManager::getInstance())
@@ -118,6 +118,7 @@ void UWBManager::configInitiator()
                           SYS_STATUS_RCINIT_BIT_MASK |
                           SYS_STATUS_SPIRDY_BIT_MASK);
     dwt_setrxtimeout(RX_TIMEOUT_UUS);
+    INITIATOR_UID = (uint8_t)random(1, 50) * 4 + 2;
     configInitatorMode = true;
     configResponderMode = false;
 }
@@ -148,80 +149,73 @@ void UWBManager::initiator()
 {
     if (deviceState == DISCOVERY)
     {
-        if (INITIATOR_UID == 0)
+        if (millis() - last_discovery_millis > 1000)
         {
-            INITIATOR_UID = (uint8_t)random(1, 50) * 4 + 2;
-        }
-
-        txMessage.buildDiscoveryBroadcast(frame_seq_nb++, myMacAddress);
-        dwt_writetxdata(txMessage.getLength() - 2, txMessage.getBuffer(), 0);
-        dwt_writetxfctrl(txMessage.getLength(), 0, 0);
-        dwt_starttx(DWT_START_TX_IMMEDIATE);
-        while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
-            ;
-        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
-
-        discovered_count = 0;
-        memset(discovered_macs, 0, sizeof(discovered_macs));
-        unsigned long discovery_start_time = millis();
-
-        while (millis() - discovery_start_time < DISCOVERY_WINDOW_MS)
-        {
-            dwt_rxenable(DWT_START_RX_IMMEDIATE);
-            while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
+            txMessage.buildDiscoveryBroadcast(frame_seq_nb++, myMacAddress);
+            dwt_writetxdata(txMessage.getLength() - 2, txMessage.getBuffer(), 0);
+            dwt_writetxfctrl(txMessage.getLength(), 0, 0);
+            dwt_starttx(DWT_START_TX_IMMEDIATE);
+            while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
                 ;
+            dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
+            discovered_count = 0;
+            memset(discovered_macs, 0, sizeof(discovered_macs));
+            unsigned long discovery_start_time = millis();
 
-            if (status_reg & SYS_STATUS_RXFCG_BIT_MASK)
+            while (millis() - discovery_start_time < DISCOVERY_WINDOW_MS)
             {
-                uint16_t frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
-                dwt_readrxdata(rx_buffer, frame_len, 0);
-                rxMessage.parse(rx_buffer, frame_len);
+                dwt_rxenable(DWT_START_RX_IMMEDIATE);
+                while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
+                    ;
 
-                if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BLINK && rxMessage.getDestinationMac() == myMacAddress)
+                if (status_reg & SYS_STATUS_RXFCG_BIT_MASK)
                 {
-                    uint64_t responderMac = rxMessage.getSourceMac();
-                    bool already_found = false;
-                    for (int i = 0; i < discovered_count; i++)
+                    uint16_t frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
+                    dwt_readrxdata(rx_buffer, frame_len, 0);
+                    rxMessage.parse(rx_buffer, frame_len);
+
+                    if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BLINK && rxMessage.getDestinationMac() == myMacAddress)
                     {
-                        if (discovered_macs[i] == responderMac)
+                        uint64_t responderMac = rxMessage.getSourceMac();
+                        bool already_found = false;
+                        for (int i = 0; i < discovered_count; i++)
                         {
-                            already_found = true;
-                            break;
+                            if (discovered_macs[i] == responderMac)
+                            {
+                                already_found = true;
+                                break;
+                            }
+                        }
+                        if (!already_found && discovered_count < (MAX_NODES - 1))
+                        {
+                            discovered_macs[discovered_count++] = responderMac;
                         }
                     }
-                    if (!already_found && discovered_count < (MAX_NODES - 1))
-                    {
-                        discovered_macs[discovered_count++] = responderMac;
-                    }
                 }
+                dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_TO | SYS_STATUS_RXFCG_BIT_MASK);
             }
-            dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_TO | SYS_STATUS_RXFCG_BIT_MASK);
-        }
-
-        if (discovered_count > 0)
-        {
-            known_devices_count = 0;
-            uint8_t total_devices = discovered_count + 1;
-            for (int i = 0; i < discovered_count; i++)
+            if (discovered_count > 0)
             {
-                uint64_t responder_mac = discovered_macs[i];
-                uint8_t assigned_uid = INITIATOR_UID + ((i + 1) * 4);
-                updateKnownDevices(responder_mac, assigned_uid);
-                txMessage.buildRangingConfig(frame_seq_nb++, myMacAddress, responder_mac, INITIATOR_UID, assigned_uid, total_devices);
-                dwt_writetxdata(txMessage.getLength(), txMessage.getBuffer(), 0);
-                dwt_writetxfctrl(txMessage.getLength() + 2, 0, 0); // FCS_LEN ist 2
-                dwt_starttx(DWT_START_TX_IMMEDIATE);
-                delay(15);
+                known_devices_count = 0;
+                uint8_t total_devices = discovered_count + 1;
+                for (int i = 0; i < discovered_count; i++)
+                {
+                    uint64_t responder_mac = discovered_macs[i];
+                    uint8_t assigned_uid = INITIATOR_UID + ((i + 1) * 4);
+                    updateKnownDevices(responder_mac, assigned_uid);
+                    txMessage.buildRangingConfig(frame_seq_nb++, myMacAddress, responder_mac, INITIATOR_UID, assigned_uid, total_devices);
+                    dwt_writetxdata(txMessage.getLength(), txMessage.getBuffer(), 0);
+                    dwt_writetxfctrl(txMessage.getLength() + 2, 0, 0);
+                    dwt_starttx(DWT_START_TX_IMMEDIATE);
+                    delay(15);
+                }
+                setRangingConfiguration(INITIATOR_UID, INITIATOR_UID, total_devices);
+                deviceState = RANGING;
+                wait_ack = false;
+                wait_final = false;
+                counter = 0;
             }
-            setRangingConfiguration(INITIATOR_UID, INITIATOR_UID, total_devices);
-            deviceState = RANGING;
-            wait_ack = false;
-            wait_final = false;
-            counter = 0;
-        }
-        else
-        {
-            delay(1000);
+            last_discovery_millis = millis();
         }
     }
     else if (deviceState == RANGING)
@@ -341,7 +335,7 @@ void UWBManager::responder()
 {
     if (deviceState == DISCOVERY)
     {
-        if (rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
+        if (func_code == FUNC_CODE_DISCOVERY_BROADCAST)
         {
             delay(random(5, MAX_RESPONSE_DELAY_MS));
             uint64_t initiatorMac = rxMessage.getSourceMac();
@@ -357,7 +351,7 @@ void UWBManager::responder()
                 return;
             }
         }
-        if (rxMessage.getFunctionCode() == FUNC_CODE_RANGING_CONFIG)
+        if (func_code == FUNC_CODE_RANGING_CONFIG)
         {
             if (rxMessage.getDestinationMac() == myMacAddress)
             {
@@ -376,7 +370,7 @@ void UWBManager::responder()
     }
     else if (deviceState == RANGING)
     {
-        if (rxMessage.getFunctionCode() == FUNC_CODE_RESET || rxMessage.getFunctionCode() == FUNC_CODE_DISCOVERY_BROADCAST)
+        if (func_code == FUNC_CODE_RESET || func_code == FUNC_CODE_DISCOVERY_BROADCAST)
         {
             deviceState = DISCOVERY;
             wait_poll = true;
@@ -560,6 +554,7 @@ void UWBManager::responder_loop()
     {
         dwt_readrxdata(rx_buffer, g_received_frame_len, 0);
         rxMessage.parse(rx_buffer, g_received_frame_len);
+        func_code = rxMessage.getFunctionCode();
         dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG_BIT_MASK);
         responder();
         g_new_message_received = false;
