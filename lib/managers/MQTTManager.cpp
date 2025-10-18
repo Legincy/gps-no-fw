@@ -53,14 +53,14 @@ void MQTTManager::connect()
         if (connected)
         {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Connected to MQTT Broker %s, state: %d", MQTT_BROKER_ADDRESS, _mqttClient.state());
+            snprintf(buffer, sizeof(buffer), "Connected to MQTT Broker %s, state: %d", MQTT_BROKER, _mqttClient.state());
             log.info("MQTTManager", buffer);
             // _mqttClient.subscribe("/test", _qos);
         }
         else
         {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Connection to Broker %s failed, state: %d", MQTT_BROKER_ADDRESS, _mqttClient.state());
+            snprintf(buffer, sizeof(buffer), "Connection to Broker %s failed, state: %d", MQTT_BROKER, _mqttClient.state());
             log.error("MQTTManager", buffer);
             log.error("MQTTManager", "Trying again in 5 secounds");
             log.delay(5000);
