@@ -90,7 +90,7 @@ public:
 
     static MQTTManager &getInstance()
     {
-        static MQTTManager instance(MQTT_BROKER_ADDRESS, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, DEVICE_NAME, MQTT_QOS, MQTT_KEEP_ALIVE);
+        static MQTTManager instance(MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, DEVICE_NAME, MQTT_QOS, MQTT_KEEP_ALIVE);
         return instance;
     }
 
@@ -148,6 +148,8 @@ public:
      * This method should be called regularly in the main loop.
      */
     void update();
+    bool publishMeasurement(const char *payload);
+    bool publishConfig(const char *payload);
 };
 
 #endif

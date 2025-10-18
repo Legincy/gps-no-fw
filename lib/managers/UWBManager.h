@@ -1,107 +1,128 @@
-#ifndef UWB_MANAGER_H
-#define UWB_MANAGER_H
+#pragma once
 
-#include "LogManager.h"
-#include "ConfigDefines.h"
+#ifndef UWBManager_H
+#define UWBManager_H
+
 #include "dw3000.h"
+#include "Frame_802_15_4.h"
 #include "ArduinoJson.h"
+#include "ConfigManager.h"
+#include "LogManager.h"
+#include "MQTTManager.h"
+// Function code
+static const uint8_t FUNC_CODE_POLL = 0xE2, FUNC_CODE_ACK = 0xE3, FUNC_CODE_RANGE = 0xE4,
+                     FUNC_CODE_FINAL = 0xE5, FUNC_CODE_RESET = 0xE6,
+                     FUNC_CODE_DISCOVERY_BROADCAST = 0xD1, FUNC_CODE_DISCOVERY_BLINK = 0xD2,
+                     FUNC_CODE_RANGING_CONFIG = 0x20;
 
-#define UWB_RST 27
-#define UWB_IRQ 34
-#define UWB_SS 4
-#define FUNC_CODE_POLL 0xE2
-#define FUNC_CODE_ACK 0xE3
-#define FUNC_CODE_RANGE 0xE4
-#define FUNC_CODE_FINAL 0xE5
-#define FUNC_CODE_RESET 0xE6
+// --- MAX NODES ---
+static const int MAX_NODES = 7;
 
-#define MSG_LEN 16         /* message length */
-#define BUF_LEN MSG_LEN    /* buffer length */
-#define MSG_SN_IDX 2       /* sequence number */
-#define MSG_SID_IDX 7      /* source id */
-#define MSG_FUNC_IDX 9     /* func code*/
-#define MSG_T_REPLY_IDX 10 /* byte index of transmitter ts */
-#define RESP_MSG_TS_LEN 4
-#define TX_TO_RX_DLY_UUS 100
-#define RX_TO_TX_DLY_UUS 800
-#define RX_TIMEOUT_UUS 400000
-
-extern uint8_t tx_msg[], rx_msg[];
-extern uint8_t frame_seq_nb;
-extern uint8_t rx_buffer[BUF_LEN];
-extern int target_uids[NUM_DW3000 - 1];
-extern uint32_t status_reg;
-extern bool wait_poll, wait_ack, wait_range, wait_final;
-extern int counter;
-extern int ret;
-
-extern uint64_t poll_tx_ts, poll_rx_ts, range_tx_ts, ack_tx_ts, range_rx_ts;
-extern uint32_t t_reply_1[NUM_DW3000 - 1];
-extern uint64_t t_reply_2;
-extern uint64_t t_round_1[NUM_DW3000 - 1];
-extern uint32_t t_round_2[NUM_DW3000 - 1];
-
-extern double tof, distance;
-extern unsigned long previous_debug_millis, current_debug_millis;
-extern int millis_since_last_serial_print;
-extern uint32_t tx_time;
-extern uint64_t tx_ts;
-extern float clockOffsetRatioAck, clockOffsetRatioFinal;
 class UWBManager
 {
-private:
-    // Privater Konstruktor (Singleton)
-    UWBManager() : log(LogManager::getInstance()) {}
-    LogManager &log;
-    float distances[NUM_DW3000 - 1];
-
 public:
-    /**
-     * @brief Gibt die Singleton-Instanz von UWBManager zurück.
-     *
-     * @return Referenz auf die einzige Instanz von UWBManager.
-     */
-    static UWBManager &getInstance()
+    static UWBManager &getInstance();
+    // --- Öffentliche Strukturen & Enums ---
+    enum DeviceState
     {
-        static UWBManager instance;
-        return instance;
-    }
+        DISCOVERY,
+        RANGING
+    };
+    struct RangingPartner
+    {
+        uint64_t mac_address;
+        uint8_t uid;
+        double distance;
+    };
 
-    /**
-     * @brief Startet den UWB-Betrieb.
-     *
-     * Führt alle notwendigen Initialisierungen für UWB durch.
-     */
-    void begin();
+    UWBManager(UWBManager const &) = delete;
+    void operator=(UWBManager const &) = delete;
 
-    /**
-     * @brief Führt die Initiator-Routine aus.
-     *
-     * Diese Methode kann als Startpunkt für eine UWB-Initiator-Routine verwendet werden.
-     */
-    void initiator(char *payload);
-
-    /**
-     * @brief Führt die Responder-Routine aus.
-     *
-     * Diese Methode kann als Startpunkt für eine UWB-Responder-Routine verwendet werden.
-     */
+    // --- Öffentliche Methoden ---
+    void start_uwb();
+    void initiator();
     void responder();
+    void responder_loop();
+    bool initiator_loop();
+    const RangingPartner *getKnownDevices() const;
+    void loop();
+    bool enableInitiator();
+    bool disableInitiator();
+    void resetUWB();
+    void printRangingInfo();
+    void printUWBConfig();
 
-    float *getDistances();
+private:
+    UWBManager(); // Privater Konstruktor
+    // Hilf-Managers
+    RuntimeConfig &runtimeconfig;
+    LogManager &logManager;
+    MQTTManager &mqttManager;
+    unsigned long last_distance_publish = 0;
+    // JSON Dokument für MQTT Nachrichten
+    JsonDocument jsonDoc;
+    // --- Private Konstanten ---
+    static const int INTERVAL = 5;
+    static const int UWB_RST = 27, UWB_IRQ = 34, UWB_SS = 4;
+
+    static const uint16_t TX_ANT_DLY = 16385, RX_ANT_DLY = 16385;
+    static const int TX_TO_RX_DLY_UUS = 100, RX_TO_TX_DLY_UUS = 8000, RX_TIMEOUT_UUS = 4000000;
+    static const int BUF_LEN = 127;
+    static const int DISCOVERY_WINDOW_MS = 500;
+    static const int MAX_RESPONSE_DELAY_MS = 20;
+
+    // --- Private Member-Variablen ---
+    // Ranging & Device Config
+    uint8_t UID, INITIATOR_UID;
+    int NUM_NODES, WAIT_NUM;
+    DeviceState deviceState;
+    uint64_t myMacAddress;
+    bool m_rangingCycleCompleted;
+    bool configInitatorMode = false;
+    bool configResponderMode = false;
+    // Messages & Buffers
+    Frame_802_15_4 txMessage, rxMessage;
+    uint8_t func_code;
+    uint8_t rx_buffer[BUF_LEN];
+    uint8_t frame_seq_nb;
+
+    // Status & Logic Flow
+    uint32_t status_reg;
+    int target_uids[MAX_NODES - 1];
+    bool wait_poll, wait_ack, wait_range, wait_final;
+    int counter, ret;
+    // Discovery
+    uint64_t discovered_macs[MAX_NODES - 1];
+    int discovered_count;
+
+    // Known Devices
+    RangingPartner known_devices[MAX_NODES];
+    int known_devices_count;
+
+    // Timestamps
+    uint64_t poll_tx_ts, poll_rx_ts, range_tx_ts, ack_tx_ts, range_rx_ts;
+    uint32_t t_reply_1[MAX_NODES - 1];
+    uint64_t t_reply_2;
+    uint64_t t_round_1[MAX_NODES - 1];
+    uint32_t t_round_2[MAX_NODES - 1];
+    uint32_t tx_time;
+    uint64_t tx_ts;
+    unsigned long last_discovery_millis;
+
+    // Calculated values
+    double tof, distance;
+
+    // Debug
+    unsigned long previous_debug_millis, current_debug_millis;
+
+    // --- Private Hilfsfunktionen ---
+    void setRangingConfiguration(uint8_t initiatorUid, uint8_t myAssignedUid, uint8_t totalDevices);
+    void updateKnownDevices(uint64_t mac, uint8_t uid);
+    void updateDistance(uint8_t uid, double new_distance);
+    void set_target_uids();
+    void print_frame_data(const uint8_t *data, uint16_t length);
+    void configInitiator();
+    void configResponder();
 };
-
-// Gemeinsame Hilfsfunktionen
-uint32_t waitForReceptionEvent(uint32_t eventMask);
-bool sendTxMessage(uint8_t *msg, uint16_t len, uint32_t txFlags);
-
-// // Initiator-spezifische Funktionen
-void initiatorSendPoll();
-void initiatorSendRange();
-
-// // Responder-spezifische Funktionen
-void responderSendAck();
-void responderSendFinal();
-void processResponderMessage();
 
 #endif
