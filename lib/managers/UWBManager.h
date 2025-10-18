@@ -9,11 +9,6 @@
 #include "ConfigManager.h"
 #include "LogManager.h"
 #include "MQTTManager.h"
-// Function code
-static const uint8_t FUNC_CODE_POLL = 0xE2, FUNC_CODE_ACK = 0xE3, FUNC_CODE_RANGE = 0xE4,
-                     FUNC_CODE_FINAL = 0xE5, FUNC_CODE_RESET = 0xE6,
-                     FUNC_CODE_DISCOVERY_BROADCAST = 0xD1, FUNC_CODE_DISCOVERY_BLINK = 0xD2,
-                     FUNC_CODE_RANGING_CONFIG = 0x20;
 
 // --- MAX NODES ---
 static const int MAX_NODES = 7;
@@ -39,13 +34,13 @@ public:
     void operator=(UWBManager const &) = delete;
 
     // --- Öffentliche Methoden ---
-    void start_uwb();
+    bool start();
     void initiator();
     void responder();
     void responder_loop();
     bool initiator_loop();
     const RangingPartner *getKnownDevices() const;
-    void loop();
+    void update();
     bool enableInitiator();
     bool disableInitiator();
     void resetUWB();

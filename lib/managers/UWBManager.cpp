@@ -1,7 +1,6 @@
 #include "UWBManager.h"
-
-#include <algorithm>
 #include <vector>
+#include <algorithm>
 
 volatile bool g_new_message_received = false;
 volatile bool g_rx_error = false;
@@ -60,7 +59,7 @@ UWBManager::UWBManager() : UID(0), INITIATOR_UID(0), NUM_NODES(0), WAIT_NUM(0),
     memset(t_round_2, 0, sizeof(t_round_2));
 }
 
-void UWBManager::start_uwb()
+bool UWBManager::start()
 {
     const char *modifiedMacStr = runtimeconfig.device.modifiedMac;
     myMacAddress = strtoull(modifiedMacStr, NULL, 16);
@@ -68,26 +67,23 @@ void UWBManager::start_uwb()
     spiBegin(UWB_IRQ, UWB_RST);
     spiSelect(UWB_SS);
     delay(200);
-    while (!dwt_checkidlerc())
+    if (!dwt_checkidlerc())
     {
         logManager.error("UWBManager", "IDLE failed");
-        while (1)
-            ;
+        return false;
     }
     dwt_softreset();
     delay(200);
     if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR)
     {
         logManager.error("UWBManager", "INIT failed");
-        while (1)
-            ;
+        return false;
     }
     dwt_setleds(DWT_LEDS_DISABLE);
     if (dwt_configure(&config))
     {
         logManager.error("UWBManager", "CONFIG failed");
-        while (1)
-            ;
+        return false;
     }
 
     dwt_configuretxrf(&txconfig_options);
@@ -95,6 +91,8 @@ void UWBManager::start_uwb()
     dwt_settxantennadelay(TX_ANT_DLY);
     dwt_setrxaftertxdelay(TX_TO_RX_DLY_UUS);
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+
+    return true;
 }
 
 void UWBManager::configInitiator()
@@ -631,7 +629,7 @@ bool UWBManager::disableInitiator()
     serializeJson(jsonDoc, payload);
     return mqttManager.publishConfig(payload.c_str());
 }
-void UWBManager::loop()
+void UWBManager::update()
 {
     if (!runtimeconfig.device.isTag)
     {

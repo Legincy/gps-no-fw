@@ -1,6 +1,17 @@
 #include "MQTTManager.h"
 #include <cstring>
 
+MQTTManager::MQTTManager()
+    : logManager(LogManager::getInstance()),
+      configManager(ConfigManager::getInstance()),
+      runtimeConfig(configManager.getRuntimeConfig()),
+      _wifiClient(),
+      _mqttClient(_wifiClient)
+{
+    // Die Initialisierung der Member erfolgt in der Initialisierungsliste.
+    // Der Konstruktor-Body ist leer. Die eigentliche Logik kommt in begin().
+}
+
 void MQTTManager::handleCallback(char *topic, byte *payload, unsigned int length)
 {
     // Convert payload into a null-terminated string
@@ -16,18 +27,18 @@ void MQTTManager::handleCallback(char *topic, byte *payload, unsigned int length
 
 bool MQTTManager::begin()
 {
-    if (_mqttServerIp == nullptr || strlen(_mqttServerIp) == 0)
+    if (runtimeConfig.mqtt.broker == 0)
     {
-        log.error("MQTTManager", "MQTT broker address is not defined");
+        logManager.error("MQTTManager", "MQTT broker address is not defined");
         return false;
     }
 
-    _mqttClient.setServer(_mqttServerIp, _mqttServerPort);
+    _mqttClient.setServer(runtimeConfig.mqtt.broker, runtimeConfig.mqtt.port);
     _mqttClient.setBufferSize(2048);
     _mqttClient.setCallback(handleCallback);
     // _mqttClient.qoS
-    _mqttClient.setKeepAlive(_keepAlive);
-    log.info("MQTTManager", "MQTT client initialized successfully");
+    _mqttClient.setKeepAlive(MQTT_KEEP_ALIVE);
+    logManager.info("MQTTManager", "MQTT client initialized successfully");
 
     return true;
 }
@@ -36,34 +47,34 @@ void MQTTManager::connect()
 {
     while (!_mqttClient.connected())
     {
-        log.info("MQTTManager", "Attempting MQTT connection....");
+        logManager.info("MQTTManager", "Attempting MQTT connection....");
         /// Connect to MQTT Broker
         bool connected = false;
 
         // Wenn Username und Passwort leer sind, ohne Authentifizierung verbinden
-        if (strlen(_mqttUsername) == 0 && strlen(_mqttPassword) == 0)
+        if (strlen(runtimeConfig.mqtt.user) == 0 && strlen(runtimeConfig.mqtt.password) == 0)
         {
             connected = _mqttClient.connect(_clientId);
         }
         else
         {
-            connected = _mqttClient.connect(_clientId, _mqttUsername, _mqttPassword);
+            connected = _mqttClient.connect(_clientId, runtimeConfig.mqtt.user, runtimeConfig.mqtt.password);
         }
 
         if (connected)
         {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Connected to MQTT Broker %s, state: %d", MQTT_BROKER, _mqttClient.state());
-            log.info("MQTTManager", buffer);
+            snprintf(buffer, sizeof(buffer), "Connected to MQTT Broker %s, state: %d", runtimeConfig.mqtt.broker, _mqttClient.state());
+            logManager.info("MQTTManager", buffer);
             // _mqttClient.subscribe("/test", _qos);
         }
         else
         {
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Connection to Broker %s failed, state: %d", MQTT_BROKER, _mqttClient.state());
-            log.error("MQTTManager", buffer);
-            log.error("MQTTManager", "Trying again in 5 secounds");
-            log.delay(5000);
+            snprintf(buffer, sizeof(buffer), "Connection to Broker %s failed, state: %d", runtimeConfig.mqtt.broker, _mqttClient.state());
+            logManager.error("MQTTManager", buffer);
+            logManager.error("MQTTManager", "Trying again in 5 secounds");
+            logManager.delay(5000);
         }
     }
 }
@@ -73,7 +84,7 @@ void MQTTManager::disconnect()
     if (_mqttClient.connected())
     {
         _mqttClient.disconnect();
-        log.info("MQTTManager", "Disconnected from MQTT broker");
+        logManager.info("MQTTManager", "Disconnected from MQTT broker");
     }
 }
 
@@ -81,7 +92,7 @@ bool MQTTManager::publish(const char *topic, const char *payload, bool retain, b
 {
     if (!_mqttClient.connected())
     {
-        log.error("MQTTManager", "MQTT client not connected");
+        logManager.error("MQTTManager", "MQTT client not connected");
         return false;
     }
 
@@ -100,13 +111,13 @@ bool MQTTManager::publish(const char *topic, const char *payload, bool retain, b
     {
         char logMsg[128];
         snprintf(logMsg, sizeof(logMsg), "Published message to topic: %s", fullTopic);
-        log.info("MQTTManager", logMsg);
+        logManager.info("MQTTManager", logMsg);
     }
     else
     {
         char logMsg[128];
         snprintf(logMsg, sizeof(logMsg), "Failed to publish message to topic: %s", fullTopic);
-        log.error("MQTTManager", logMsg);
+        logManager.error("MQTTManager", logMsg);
     }
     return success;
 }
@@ -115,7 +126,7 @@ bool MQTTManager::subscribe(const char *topic, MQTTCallback callback)
 {
     if (!_mqttClient.connected())
     {
-        log.error("MQTTManager", "MQTT client not connected");
+        logManager.error("MQTTManager", "MQTT client not connected");
         return false;
     }
 
@@ -128,13 +139,13 @@ bool MQTTManager::subscribe(const char *topic, MQTTCallback callback)
         _subscriptions.push_back(sub);
         char logMsg[128];
         snprintf(logMsg, sizeof(logMsg), "Subscribed to topic: %s", topic);
-        log.info("MQTTManager", logMsg);
+        logManager.info("MQTTManager", logMsg);
     }
     else
     {
         char logMsg[128];
         snprintf(logMsg, sizeof(logMsg), "Failed to subscribe to topic: %s", topic);
-        log.error("MQTTManager", logMsg);
+        logManager.error("MQTTManager", logMsg);
     }
     return success;
 }
@@ -146,4 +157,22 @@ void MQTTManager::update()
         connect();
     }
     _mqttClient.loop();
+}
+
+bool MQTTManager::publishMeasurement(const char *payload)
+{
+    const char *macAddress = runtimeConfig.device.modifiedMac;
+    char fullTopic[128];
+    snprintf(fullTopic, sizeof(fullTopic), "%s/measurements/%s", MQTT_BASE_TOPIC, macAddress);
+
+    return publish(fullTopic, payload, false, true);
+}
+
+bool MQTTManager::publishConfig(const char *payload)
+{
+    const char *macAddress = runtimeConfig.device.modifiedMac;
+    char fullTopic[128];
+    snprintf(fullTopic, sizeof(fullTopic), "%s/stations/%s", MQTT_BASE_TOPIC, macAddress);
+
+    return publish(fullTopic, payload, true, true);
 }

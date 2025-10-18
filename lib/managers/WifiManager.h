@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include "LogManager.h"
 #include "ConfigDefines.h"
+#include "ConfigManager.h"
 
 enum class WiFiStatus
 {
@@ -21,8 +22,10 @@ class WifiManager
 {
 private:
     WifiManager()
-        : log(LogManager::getInstance()) {}
-    LogManager &log;
+        : logManager(LogManager::getInstance()), configManager(ConfigManager::getInstance()), runtimeconfig(configManager.getRuntimeConfig()) {}
+    LogManager &logManager;
+    ConfigManager &configManager;
+    RuntimeConfig &runtimeconfig;
 
 public:
     WifiManager(const WifiManager &) = delete;

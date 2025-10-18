@@ -8,22 +8,22 @@ bool WifiManager::begin()
 
 bool WifiManager::connect()
 {
-    if (strlen(WIFI_SSID) == 0 || !isTargetSSIDFound(WIFI_SSID))
+    if (strlen(runtimeconfig.wifi.ssid) == 0 || !isTargetSSIDFound(runtimeconfig.wifi.password))
     {
-        log.error("WifiManager", "SSID not available");
+        logManager.error("WifiManager", "SSID not available");
         return false;
     }
     if (strlen(WIFI_PASSWORD) == 0)
     {
-        log.error("WifiManager", "No Password available");
+        logManager.error("WifiManager", "No Password available");
         return false;
     }
 
-    if (!WiFi.begin(WIFI_SSID, WIFI_PASSWORD))
+    if (!WiFi.begin(runtimeconfig.wifi.ssid, runtimeconfig.wifi.password))
     {
         char errorBuffer[128];
-        snprintf(errorBuffer, sizeof(errorBuffer), "Fail to begin Wifi %s", WIFI_SSID);
-        log.error("WifiManager", errorBuffer);
+        snprintf(errorBuffer, sizeof(errorBuffer), "Fail to begin Wifi %s", runtimeconfig.wifi.ssid);
+        logManager.error("WifiManager", errorBuffer);
         return false;
     }
 
@@ -31,13 +31,13 @@ bool WifiManager::connect()
     long start_time = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
-        log.delay(500);
+        logManager.delay(500);
 
         if ((millis() - start_time) > time_out)
         {
             char errorBuffer[128];
             snprintf(errorBuffer, sizeof(errorBuffer), "Connect to %s fail, please check your pwd", WIFI_SSID);
-            log.error("WifiManager", errorBuffer);
+            logManager.error("WifiManager", errorBuffer);
             return false;
         }
     }

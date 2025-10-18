@@ -1,16 +1,14 @@
-#include "Initiator.h"
+#include "Device.h"
 
 void setup()
 {
     Serial.begin(115200);
-    if (!Initiator::getInstance().begin())
-    {
-        while (true)
-            ;
-    }
+    Device &device = Device::getInstance();
+    device.begin();
 }
 
 void loop()
 {
-    Initiator::getInstance().runTag();
+    Device &device = Device::getInstance();
+    device.update();
 }

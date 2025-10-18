@@ -3,6 +3,16 @@
     "editor.formatOnSave": true,
     "files.associations": {
         "*.embeddedhtml": "html",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "memory": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "regex": "cpp"
     }
 }

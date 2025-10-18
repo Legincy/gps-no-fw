@@ -3,6 +3,7 @@
 
 #include <PubSubClient.h>
 #include <WiFiClient.h>
+#include <ConfigManager.h>
 #include <vector>
 #include <functional>
 #include "LogManager.h"
@@ -22,57 +23,23 @@ struct Subscription
 class MQTTManager
 {
 private:
-    LogManager &log;          // Logging instance
+    MQTTManager();
+    LogManager &logManager;       // Logging instance
+    ConfigManager &configManager; // Configuration manager instance
+    RuntimeConfig &runtimeConfig;
     WiFiClient _wifiClient;   // WiFi client
     PubSubClient _mqttClient; // MQTT client
     // bool _initialized;
-
-    // MQTT server credentials/settings
-    const char *_mqttServerIp;
-    uint16_t _mqttServerPort;
-    const char *_mqttUsername;
-    const char *_mqttPassword;
-    const char *_mqttClientName;
     uint16_t _qos;
     uint16_t _keepAlive;
-
     char _clientId[64];
     char _pubTopic[64];
     char _subTopic[64];
     char _devTopic[64]; // send log to mqtt broker (not implemented)
-
     // List of topic subscriptions
     std::vector<Subscription> _subscriptions;
-
     // Private callback for incoming MQTT messages.
     static void handleCallback(char *topic, byte *payload, unsigned int length);
-
-    // Privater Konstruktor (Singleton-Muster)
-    MQTTManager(const char *mqttServerIp,
-                uint16_t mqttServerPort,
-                const char *mqttUsername,
-                const char *mqttPassword,
-                const char *mqttClientName,
-                uint16_t qos,
-                uint16_t keepAlive)
-        : log(LogManager::getInstance()),
-          _wifiClient(),
-          _mqttClient(_wifiClient),
-          _mqttServerIp(mqttServerIp),
-          _mqttServerPort(mqttServerPort),
-          _mqttUsername(mqttUsername),
-          _mqttPassword(mqttPassword),
-          _mqttClientName(mqttClientName),
-          _qos(qos),
-          _keepAlive(keepAlive)
-    {
-        // TOPIC
-        uint64_t chipid = ESP.getEfuseMac();
-        snprintf(_clientId, sizeof(_clientId), "%s-%llX", _mqttClientName, chipid);
-        snprintf(_pubTopic, sizeof(_pubTopic), "%s/%s", MQTT_BASE_TOPIC, _clientId);
-        // snprintf(_subTopic, sizeof(_pubTopic), "%s/%s", "to", _clientId);
-        // snprintf(_deviceTopic, sizeof(_deviceTopic), "%s%llX", MQTT_BASE_TOPIC, chipid);
-    }
 
 public:
     // Kopierkonstruktor und Zuweisungsoperator löschen (Singleton)
@@ -90,7 +57,7 @@ public:
 
     static MQTTManager &getInstance()
     {
-        static MQTTManager instance(MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, DEVICE_NAME, MQTT_QOS, MQTT_KEEP_ALIVE);
+        static MQTTManager instance;
         return instance;
     }
 

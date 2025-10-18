@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include "dw3000_regs.h"
-
+#include "Arduino.h"
 // ----------- Nachrichten-Layout-Definitionen (nur für Ranging) -----------
 #define MSG_SN_IDX 2
 #define MSG_DID_IDX 5
@@ -12,8 +12,18 @@
 #define MSG_T_REPLY_IDX 10
 #define RESP_MSG_TS_LEN 4
 #define MAX_UWB_MESSAGE_LEN 127
+// Function code
+static const uint8_t FUNC_CODE_POLL = 0xE2, FUNC_CODE_ACK = 0xE3, FUNC_CODE_RANGE = 0xE4,
+                     FUNC_CODE_FINAL = 0xE5, FUNC_CODE_RESET = 0xE6,
+                     FUNC_CODE_DISCOVERY_BROADCAST = 0xD1, FUNC_CODE_DISCOVERY_BLINK = 0xD2,
+                     FUNC_CODE_RANGING_CONFIG = 0x20;
 
-void mac_uint64_to_str(uint64_t mac, char *str);
+static void mac_uint64_to_str(uint64_t mac, char *str)
+{
+    sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            (uint8_t)(mac >> 40), (uint8_t)(mac >> 32), (uint8_t)(mac >> 24),
+            (uint8_t)(mac >> 16), (uint8_t)(mac >> 8), (uint8_t)(mac));
+}
 
 class Frame_802_15_4
 {
