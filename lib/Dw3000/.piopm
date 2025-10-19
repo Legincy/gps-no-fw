@@ -1,0 +1,1 @@
+{"type": "library", "name": "DW3000", "version": "0.1.0+sha.594ea2f", "spec": {"owner": null, "id": null, "name": "Makerfabs-ESP32-UWB-DW3000", "requirements": null, "uri": "git+https://github.com/Makerfabs/Makerfabs-ESP32-UWB-DW3000"}}

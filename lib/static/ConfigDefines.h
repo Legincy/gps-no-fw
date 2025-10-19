@@ -1,0 +1,43 @@
+#ifndef CONFIG_DEFINES_H
+#define CONFIG_DEFINES_H
+
+#define DEVICE_NAME ""
+#define DEVICE_HEARTBEAT_INTERVAL 60000
+#define DEVICE_DISTANCES_UPDATE_INTERVAL 50
+
+#define WIFI_SSID "Wohnzimmer"       // Todo: Delete
+#define WIFI_PASSWORD "Sibellam1723" // Todo: Delete
+#define WIFI_AUTO_RECONNECT true
+#define WIFI_CHECK_INTERVAL 500
+#define WIFI_RECONNECT_INTERVAL 5000
+#define WIFI_MAX_CONNECTION_ATTEMPTS 20
+#define WIFI_FTM_FRAME_COUNT 16
+#define WIFI_FTM_BURST_PERIOD 2
+
+#define MQTT_BROKER "mq.mini4.de" // Todo: Delete
+#define MQTT_PORT 1883
+#define MQTT_USER "gpsno"
+#define MQTT_PASSWORD "S%&n@b5LHnog4tV5" // Todo: Delete
+#define MQTT_RETRY_INTERVAL 5000
+#define MQTT_MAX_CONNECTION_ATTEMPTS 20
+#define MQTT_BASE_TOPIC "gpsno/v2"
+#define MQTT_KEEP_ALIVE 180
+#define MQTT_QOS 0
+
+#define BLUETOOTH_TIMEOUT 5000
+#define BLUETOOTH_MAX_CONNECTIONS 3
+
+#define ERROR_MAX_RECOVERY_ATTEMPTS 3
+#define ERROR_RECOVERY_INTERVAL 5000
+
+#define LOGGING_LEVEL 0 // 0: DEBUG, 1: INFO, 2: WARNING, 3: ERROR
+#define LOGGING_ALLOW_MQTT_LOG true
+#define LOGGING_MQTT_TOPIC ""
+
+#define UPDATE_GITHUB_API_URL "https://api.github.com/repos/Legincy/gps-no-fw/releases/latest"
+#define UPDATE_GITHUB_API_TOKEN ""
+#define UPDATE_INTERVAL 10000
+#define UPDATE_INITIAL_CHECK true
+
+#define DEBUG_FORCE_CONFIG true
+#endif
