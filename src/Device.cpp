@@ -10,7 +10,12 @@ bool Device::begin()
 
         return false;
     }
-    if (!wifiManager.begin())
+    if (!commandManager.begin())
+    {
+        log.error("Device", "Failed to initialize CommandManager");
+        return false;
+    }
+    if (!wifiManager.begin() || !wifiManager.connect())
     {
         log.error("Device", "Failed to initialize WifiManager");
 
@@ -35,6 +40,7 @@ bool Device::begin()
 }
 void Device::update()
 {
+    commandManager.update();
     mqttManager.update();
     uwbManager.update();
 }

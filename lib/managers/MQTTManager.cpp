@@ -106,20 +106,20 @@ bool MQTTManager::publish(const char *topic, const char *payload, bool retain, b
         snprintf(fullTopic, sizeof(fullTopic), "%s/%s", _pubTopic, topic);
     }
 
-    bool success = _mqttClient.publish(fullTopic, payload, retain);
-    if (success)
+    if (_mqttClient.publish(fullTopic, payload, retain))
     {
-        char logMsg[128];
-        snprintf(logMsg, sizeof(logMsg), "Published message to topic: %s", fullTopic);
-        logManager.info("MQTTManager", logMsg);
+        // char logMsg[128];
+        // snprintf(logMsg, sizeof(logMsg), "Published message to topic: %s", fullTopic);
+        // logManager.info("MQTTManager", logMsg);
+        return true;
     }
     else
     {
         char logMsg[128];
         snprintf(logMsg, sizeof(logMsg), "Failed to publish message to topic: %s", fullTopic);
         logManager.error("MQTTManager", logMsg);
+        return false;
     }
-    return success;
 }
 
 bool MQTTManager::subscribe(const char *topic, MQTTCallback callback)

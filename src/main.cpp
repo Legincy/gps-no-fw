@@ -4,7 +4,9 @@ void setup()
 {
     Serial.begin(115200);
     Device &device = Device::getInstance();
-    device.begin();
+    while (!device.begin())
+    {
+    };
 }
 
 void loop()

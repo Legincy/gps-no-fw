@@ -8,11 +8,11 @@ bool WifiManager::begin()
 
 bool WifiManager::connect()
 {
-    if (strlen(runtimeconfig.wifi.ssid) == 0 || !isTargetSSIDFound(runtimeconfig.wifi.password))
-    {
-        logManager.error("WifiManager", "SSID not available");
-        return false;
-    }
+    // if (strlen(runtimeconfig.wifi.ssid) == 0 || !isTargetSSIDFound(runtimeconfig.wifi.password))
+    // {
+    //     logManager.error("WifiManager", "SSID not available");
+    //     return false;
+    // }
     if (strlen(WIFI_PASSWORD) == 0)
     {
         logManager.error("WifiManager", "No Password available");
